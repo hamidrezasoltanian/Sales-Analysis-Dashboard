@@ -1,0 +1,110 @@
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>داشبورد یکپارچه مدیریت فروش</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+        }
+        :root, .theme-default {
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --text-color-secondary: #6b7280;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --sidebar-bg: #ffffff;
+            --sidebar-text: #374151;
+            --sidebar-active-bg: #e0f2fe;
+            --sidebar-active-text: #0c4a6e;
+            --button-bg: #3b82f6;
+            --button-hover: #2563eb;
+            --green-bg: #10b981;
+            --purple-bg: #8b5cf6;
+        }
+        .theme-gray { /* Improved Dark Mode */
+            --bg-color: #111827;
+            --text-color: #d1d5db;
+            --text-color-secondary: #9ca3af;
+            --card-bg: #1f2937;
+            --border-color: #374151;
+            --sidebar-bg: #1f2937;
+            --sidebar-text: #d1d5db;
+            --sidebar-active-bg: #374151;
+            --sidebar-active-text: #ffffff;
+            --button-bg: #374151;
+            --button-hover: #4b5563;
+            --green-bg: #10b981;
+            --purple-bg: #8b5cf6;
+        }
+        .theme-blue {
+            --bg-color: #1e3a8a;
+            --text-color: #f0f9ff;
+            --text-color-secondary: #e0f2fe;
+            --card-bg: #1e40af;
+            --border-color: #2563eb;
+            --sidebar-bg: #1e40af;
+            --sidebar-text: #dbeafe;
+            --sidebar-active-bg: #2563eb;
+            --sidebar-active-text: #ffffff;
+            --button-bg: #3b82f6;
+            --button-hover: #60a5fa;
+            --green-bg: #34d399;
+            --purple-bg: #a78bfa;
+        }
+        body { background-color: var(--bg-color); color: var(--text-color); }
+        .card { background-color: var(--card-bg); border-color: var(--border-color); }
+        .text-secondary { color: var(--text-color-secondary); }
+        .btn-primary { background-color: var(--button-bg); color: white; }
+        .btn-primary:hover { background-color: var(--button-hover); }
+        .btn-green { background-color: var(--green-bg); color: white; }
+        .btn-purple { background-color: var(--purple-bg); color: white; }
+        .tab-button-internal {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease-in-out;
+        }
+        .tab-button-internal.active {
+            background-color: var(--button-bg);
+            color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* Animation for fade-in */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "recharts": "https://aistudiocdn.com/recharts@^3.1.2",
+    "immer": "https://aistudiocdn.com/immer@^10.1.1"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>
