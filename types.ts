@@ -181,3 +181,9 @@ export interface EmployeeAutoTarget {
     annual: AnnualTarget;
     provinces: ProvinceTargetDetail[];
 }
+
+// New Modal Prop types
+export interface EmployeeTargetDetailModalProps {
+    targetData: EmployeeAutoTarget;
+    closeModal: () => void;
+}
