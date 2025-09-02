@@ -85,6 +85,14 @@ export interface Province {
     assignedTo: number | null; // Employee ID
 }
 
+// New interface for medical centers in Tehran
+export interface MedicalCenter {
+    id: string; // e.g., 'mc_168...
+    name: string;
+    marketShare: ProvinceMarketShare;
+    assignedTo: number | null; // Employee ID
+}
+
 export interface MarketData {
     [productId: string]: {
         [year: number]: number; // size per year
@@ -99,14 +107,17 @@ export interface AppData {
     products: Product[];
     salesTargets: SalesTargets;
     provinces: Province[];
+    medicalCenters: MedicalCenter[];
     marketData: MarketData;
     availableYears: number[];
+    backgroundImage: string | null;
 }
 
 export enum View {
     Dashboard = 'dashboard',
     SalesTargeting = 'salesTargeting',
     Management = 'management',
+    TehranManagement = 'tehranManagement',
     Settings = 'settings',
 }
 
@@ -124,6 +135,7 @@ export interface SettingsViewProps extends AppData {
     theme: Theme;
     setTheme: (theme: Theme) => void;
     updateSalesConfig: (newConfig: Partial<AppData['salesConfig']>) => void;
+    setBackgroundImage: (imageData: string | null) => void;
 }
 
 
@@ -168,9 +180,9 @@ export interface AnnualTarget {
     seasons: { [season: string]: SeasonalTarget };
 }
 
-export interface ProvinceTargetDetail {
-    provinceName: string;
-    provinceShare: number;
+export interface TerritoryTargetDetail {
+    territoryName: string;
+    territoryShare: number;
     annual: AnnualTarget;
 }
 
@@ -180,7 +192,7 @@ export interface EmployeeAutoTarget {
     targetAcquisitionRate: number;
     totalShare: number;
     annual: AnnualTarget;
-    provinces: ProvinceTargetDetail[];
+    territories: TerritoryTargetDetail[];
 }
 
 // New Modal Prop types

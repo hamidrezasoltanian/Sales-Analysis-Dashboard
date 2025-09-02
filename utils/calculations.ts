@@ -1,5 +1,4 @@
-
-import { Employee, Kpi, KpiConfigs, SalesConfig, SalesPlannerState, SalesMetrics, SalesTargets, Product, Province, EmployeeAutoTarget, AnnualTarget, MonthlyTarget } from '../types';
+import { Employee, Kpi, KpiConfigs, SalesConfig, SalesPlannerState, SalesMetrics, SalesTargets, Product, Province, EmployeeAutoTarget, AnnualTarget, MonthlyTarget, MedicalCenter } from '../types';
 
 // --- Period Utilities ---
 const PERSIAN_MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
@@ -150,7 +149,7 @@ const calculateFullTimeBreakdown = (annualTargetQuantity: number, price: number)
 
 export const calculateAutoTargets = (
     employees: Employee[],
-    provinces: Province[],
+    territories: (Province | MedicalCenter)[],
     selectedProduct: Product | undefined,
     totalMarketSize: number
 ): EmployeeAutoTarget[] => {
@@ -160,22 +159,22 @@ export const calculateAutoTargets = (
     employees.forEach(e => {
         employeeTargets.set(e.id, {
             employeeId: e.id, employeeName: e.name, targetAcquisitionRate: e.targetAcquisitionRate ?? 0,
-            totalShare: 0, annual: calculateFullTimeBreakdown(0, selectedProduct.price), provinces: [],
+            totalShare: 0, annual: calculateFullTimeBreakdown(0, selectedProduct.price), territories: [],
         });
     });
 
-    provinces.forEach(province => {
-        if (province.assignedTo !== null) {
-            const employeeTarget = employeeTargets.get(province.assignedTo);
+    territories.forEach(territory => {
+        if (territory.assignedTo !== null) {
+            const employeeTarget = employeeTargets.get(territory.assignedTo);
             if(employeeTarget) {
-                const provinceShare = province.marketShare[selectedProduct.id] || 0;
-                const provincePotential = (provinceShare / 100) * totalMarketSize;
-                const annualTargetQty = provincePotential * ((employeeTarget.targetAcquisitionRate) / 100);
+                const territoryShare = territory.marketShare[selectedProduct.id] || 0;
+                const territoryPotential = (territoryShare / 100) * totalMarketSize;
+                const annualTargetQty = territoryPotential * ((employeeTarget.targetAcquisitionRate) / 100);
                 
-                employeeTarget.totalShare += provinceShare;
-                employeeTarget.provinces.push({
-                    provinceName: province.name,
-                    provinceShare,
+                employeeTarget.totalShare += territoryShare;
+                employeeTarget.territories.push({
+                    territoryName: territory.name,
+                    territoryShare,
                     annual: calculateFullTimeBreakdown(annualTargetQty, selectedProduct.price),
                 });
             }
@@ -184,11 +183,11 @@ export const calculateAutoTargets = (
     
     // Sum up province targets to get final employee totals
     employeeTargets.forEach(target => {
-        const totalQty = target.provinces.reduce((sum, p) => sum + p.annual.quantity, 0);
+        const totalQty = target.territories.reduce((sum, p) => sum + p.annual.quantity, 0);
         if (totalQty > 0) {
            target.annual = calculateFullTimeBreakdown(totalQty, selectedProduct.price);
         }
     });
 
-    return Array.from(employeeTargets.values()).filter(t => t.provinces.length > 0);
+    return Array.from(employeeTargets.values()).filter(t => t.territories.length > 0);
 };

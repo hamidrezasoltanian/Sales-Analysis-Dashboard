@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { produce } from 'immer';
-import { Employee, View, Theme, AppData, Product, Province, Kpi, SalesConfig } from './types';
+import { Employee, View, Theme, AppData, Product, Province, Kpi, SalesConfig, MedicalCenter } from './types';
 import { LOCAL_STORAGE_KEY, INITIAL_APP_DATA } from './constants';
 import Sidebar from './components/Sidebar';
 import KpiDashboardView from './components/KpiDashboardView';
 import ManagementView from './components/ManagementView';
 import SalesTargetingPage from './components/SalesTargetingPage';
 import SettingsView from './components/SettingsView';
+import TehranManagementView from './components/TehranManagementView';
 
 const App: React.FC = () => {
     const [appData, setAppData] = useState<AppData>(() => {
@@ -26,6 +26,9 @@ const App: React.FC = () => {
                     draft.provinces.forEach((prov: Province) => {
                         prov.assignedTo = prov.assignedTo ?? null;
                     });
+                    if (!draft.medicalCenters) draft.medicalCenters = []; // Migration for medical centers
+                    if (!draft.backgroundImage) draft.backgroundImage = null; // Migration for background image
+
                     if (parsed.marketData) {
                         Object.keys(parsed.marketData).forEach(productId => {
                             const oldEntry = parsed.marketData[productId];
@@ -52,7 +55,14 @@ const App: React.FC = () => {
 
     useEffect(() => {
         document.body.className = `theme-${theme}`;
-    }, [theme]);
+         if (appData.backgroundImage) {
+            document.body.style.backgroundImage = `url(${appData.backgroundImage})`;
+            document.body.classList.add('with-background');
+        } else {
+            document.body.style.backgroundImage = 'none';
+            document.body.classList.remove('with-background');
+        }
+    }, [theme, appData.backgroundImage]);
     
     const updateAppData = (updater: (draft: AppData) => void) => {
         setAppData(produce(updater));
@@ -94,6 +104,9 @@ const App: React.FC = () => {
             draft.employees = draft.employees.filter(emp => emp.id !== id);
             draft.provinces.forEach(prov => {
                 if (prov.assignedTo === id) prov.assignedTo = null;
+            });
+            draft.medicalCenters.forEach(center => {
+                if (center.assignedTo === id) center.assignedTo = null;
             });
         });
     };
@@ -155,6 +168,32 @@ if (province) province.assignedTo = employeeId;
         });
     };
 
+    // --- Tehran Medical Center Management ---
+    const saveMedicalCenter = (center: MedicalCenter) => {
+        updateAppData(draft => {
+            const index = draft.medicalCenters.findIndex(c => c.id === center.id);
+            if (index > -1) draft.medicalCenters[index] = center;
+            else draft.medicalCenters.push({ ...center, id: `mc_${Date.now()}` });
+        });
+    };
+
+    const deleteMedicalCenter = (centerId: string) => {
+        updateAppData(draft => {
+            draft.medicalCenters = draft.medicalCenters.filter(c => c.id !== centerId);
+        });
+    };
+    
+    const saveMedicalCenters = (centers: MedicalCenter[]) => {
+        updateAppData(draft => { draft.medicalCenters = centers; });
+    };
+
+    const updateMedicalCenterAssignment = (centerId: string, employeeId: number | null) => {
+        updateAppData(draft => {
+            const center = draft.medicalCenters.find(c => c.id === centerId);
+            if (center) center.assignedTo = employeeId;
+        });
+    };
+
     // --- Targeting & Planner Management ---
     const updateMarketData = (productId: string, year: number, size: number) => {
         updateAppData(draft => {
@@ -184,6 +223,12 @@ if (province) province.assignedTo = employeeId;
             draft.salesConfig = { ...draft.salesConfig, ...newConfig };
         });
     };
+
+     const setBackgroundImage = (imageData: string | null) => {
+        updateAppData(draft => {
+            draft.backgroundImage = imageData;
+        });
+    };
     
     const saveKpiConfig = (id: string, name: string, maxPoints: number, formula: string) => {
         updateAppData(draft => {
@@ -208,6 +253,8 @@ if (province) province.assignedTo = employeeId;
              draft.availableYears = data.availableYears?.length > 0 ? data.availableYears : [1404];
              draft.employees.forEach(emp => { emp.targetAcquisitionRate ??= 10; });
              draft.provinces.forEach(prov => { prov.assignedTo ??= null; });
+             if (!draft.medicalCenters) draft.medicalCenters = [];
+             if (!draft.backgroundImage) draft.backgroundImage = null;
         });
         setAppData(validatedData);
     }, []);
@@ -220,8 +267,10 @@ if (province) province.assignedTo = employeeId;
                 return <SalesTargetingPage {...appData} updateMarketData={updateMarketData} saveSalesTargetData={saveSalesTargetData} />;
             case View.Management:
                 return <ManagementView {...appData} saveProduct={saveProduct} deleteProduct={deleteProduct} saveProvinces={saveProvinces} updateProvinceAssignment={updateProvinceAssignment} />;
+             case View.TehranManagement:
+                return <TehranManagementView employees={appData.employees} products={appData.products} medicalCenters={appData.medicalCenters} saveMedicalCenter={saveMedicalCenter} deleteMedicalCenter={deleteMedicalCenter} saveMedicalCenters={saveMedicalCenters} updateMedicalCenterAssignment={updateMedicalCenterAssignment} />;
             case View.Settings:
-                return <SettingsView {...appData} updateSalesPlannerState={updateSalesPlannerState} saveKpiConfig={saveKpiConfig} deleteKpiConfig={deleteKpiConfig} restoreData={restoreData} theme={theme} setTheme={setTheme} updateSalesConfig={updateSalesConfig} />;
+                return <SettingsView {...appData} updateSalesPlannerState={updateSalesPlannerState} saveKpiConfig={saveKpiConfig} deleteKpiConfig={deleteKpiConfig} restoreData={restoreData} theme={theme} setTheme={setTheme} updateSalesConfig={updateSalesConfig} setBackgroundImage={setBackgroundImage}/>;
             default:
                 return null;
         }

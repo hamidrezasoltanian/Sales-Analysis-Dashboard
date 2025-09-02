@@ -1,9 +1,8 @@
-
 import React from 'react';
-import { Province, Employee, Product, MarketData } from '../../types';
+import { Province, Employee, Product, MarketData, MedicalCenter } from '../../types';
 
 interface ProvinceDetailModalProps {
-    province: Province;
+    province: Province | MedicalCenter;
     employees: Employee[];
     products: Product[];
     marketData: MarketData;
@@ -20,7 +19,7 @@ const ProvinceDetailModal: React.FC<ProvinceDetailModalProps> = ({ province, emp
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={closeModal}>
             <div className="w-11/12 md:max-w-3xl rounded-2xl shadow-2xl p-6 card" onClick={e => e.stopPropagation()}>
-                <h3 className="text-2xl font-bold mb-2">تحلیل تارگت استان: {province.name} (سال {analysisYear})</h3>
+                <h3 className="text-2xl font-bold mb-2">تحلیل تارگت منطقه: {province.name} (سال {analysisYear})</h3>
                 {assignedEmployee ? (
                     <div>
                         <p className="text-secondary mb-4">
@@ -31,9 +30,9 @@ const ProvinceDetailModal: React.FC<ProvinceDetailModalProps> = ({ province, emp
                                 <thead>
                                     <tr style={{backgroundColor: 'var(--bg-color)'}}>
                                         <th className="p-2">محصول</th>
-                                        <th className="p-2">سهم استان (%)</th>
+                                        <th className="p-2">سهم منطقه (%)</th>
                                         <th className="p-2">اندازه بازار (تعداد)</th>
-                                        <th className="p-2">پتانسیل استان (تعداد)</th>
+                                        <th className="p-2">پتانسیل منطقه (تعداد)</th>
                                         <th className="p-2">تارگت سالانه (تعداد)</th>
                                         <th className="p-2">تارگت سالانه (ریالی)</th>
                                     </tr>
@@ -60,12 +59,12 @@ const ProvinceDetailModal: React.FC<ProvinceDetailModalProps> = ({ province, emp
                                 </tbody>
                             </table>
                              <p className="text-xs text-secondary mt-2">
-                                * محاسبات بر اساس اندازه بازار تعریف شده برای سال <strong>{analysisYear}</strong> در تب "هدف‌گذاری خودکار" انجام شده است.
+                                * محاسبات بر اساس اندازه بازار تعریف شده برای سال <strong>{analysisYear}</strong> در تب "هدف‌گذاری فروش خودکار" انجام شده است.
                             </p>
                         </div>
                     </div>
                 ) : (
-                    <p className="py-8 text-center text-secondary">هیچ کارمندی به این استان تخصیص داده نشده است.</p>
+                    <p className="py-8 text-center text-secondary">هیچ کارمندی به این منطقه تخصیص داده نشده است.</p>
                 )}
                 <div className="text-center mt-6">
                     <button onClick={closeModal} className="bg-gray-300 text-gray-800 px-8 py-2 rounded-lg hover:bg-gray-400 transition">بستن</button>

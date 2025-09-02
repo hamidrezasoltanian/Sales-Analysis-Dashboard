@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AppData } from '../types';
 import AutoTargetingView from './AutoTargetingView';
@@ -29,6 +28,7 @@ const SalesTargetingPage: React.FC<SalesTargetingPageProps> = (props) => {
                         employees={props.employees}
                         products={props.products}
                         provinces={props.provinces}
+                        medicalCenters={props.medicalCenters}
                         marketData={props.marketData}
                         updateMarketData={props.updateMarketData}
                         availableYears={props.availableYears}

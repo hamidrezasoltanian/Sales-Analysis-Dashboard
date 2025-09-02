@@ -1,12 +1,12 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
-import { Employee, Product, Province, MarketData, EmployeeAutoTarget, SeasonalTarget, MonthlyTarget } from '../types';
+import { Employee, Product, Province, MarketData, EmployeeAutoTarget, SeasonalTarget, MonthlyTarget, MedicalCenter, TerritoryTargetDetail } from '../types';
 import { calculateAutoTargets } from '../utils/calculations';
 
 interface AutoTargetingViewProps {
     employees: Employee[];
     products: Product[];
     provinces: Province[];
+    medicalCenters: MedicalCenter[];
     marketData: MarketData;
     updateMarketData: (productId: string, year: number, size: number) => void;
     availableYears: number[];
@@ -23,7 +23,7 @@ const formatCurrency = (value: number) => {
 
 const levelColorClasses = [
     'bg-gray-50', // Level 0 (Employee)
-    'bg-white', // Level 1 (Province)
+    'bg-white', // Level 1 (Territory)
     'bg-gray-50', // Level 2 (Season)
     'bg-white' // Level 3 (Month)
 ];
@@ -87,19 +87,19 @@ const SeasonalRows: React.FC<{ seasons: { [key: string]: SeasonalTarget }, level
     );
 };
 
-const ProvinceRows: React.FC<{ provinces: EmployeeAutoTarget['provinces'], level: number, parentKey: string }> = ({ provinces, level, parentKey }) => {
-    const [expandedProvinces, setExpandedProvinces] = useState<{ [key: string]: boolean }>({});
-    const toggleProvince = (provinceKey: string) => setExpandedProvinces(prev => ({ ...prev, [provinceKey]: !prev[provinceKey] }));
+const TerritoryRows: React.FC<{ territories: TerritoryTargetDetail[], level: number, parentKey: string }> = ({ territories, level, parentKey }) => {
+    const [expandedTerritories, setExpandedTerritories] = useState<{ [key: string]: boolean }>({});
+    const toggleTerritory = (territoryKey: string) => setExpandedTerritories(prev => ({ ...prev, [territoryKey]: !prev[territoryKey] }));
     
     return (
         <>
-            {provinces.map((provinceData) => {
-                 const key = `${parentKey}-${provinceData.provinceName}`;
-                 const isExpanded = !!expandedProvinces[key];
+            {territories.map((territoryData) => {
+                 const key = `${parentKey}-${territoryData.territoryName}`;
+                 const isExpanded = !!expandedTerritories[key];
                  return (
                      <React.Fragment key={key}>
-                         <Row label={provinceData.provinceName} quantity={provinceData.annual.quantity} value={provinceData.annual.value} level={level} isExpanded={isExpanded} onToggle={() => toggleProvince(key)} hasChildren={true} col1={`${formatNumber(provinceData.provinceShare, 2)}%`} />
-                         {isExpanded && <SeasonalRows seasons={provinceData.annual.seasons} level={level + 1} parentKey={key}/>}
+                         <Row label={territoryData.territoryName} quantity={territoryData.annual.quantity} value={territoryData.annual.value} level={level} isExpanded={isExpanded} onToggle={() => toggleTerritory(key)} hasChildren={true} col1={`${formatNumber(territoryData.territoryShare, 2)}%`} />
+                         {isExpanded && <SeasonalRows seasons={territoryData.annual.seasons} level={level + 1} parentKey={key}/>}
                      </React.Fragment>
                  );
             })}
@@ -108,7 +108,7 @@ const ProvinceRows: React.FC<{ provinces: EmployeeAutoTarget['provinces'], level
 };
 
 
-const AutoTargetingView: React.FC<AutoTargetingViewProps> = ({ employees, products, provinces, marketData, updateMarketData, availableYears }) => {
+const AutoTargetingView: React.FC<AutoTargetingViewProps> = ({ employees, products, provinces, medicalCenters, marketData, updateMarketData, availableYears }) => {
     const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id.toString() || '');
     const [year, setYear] = useState(availableYears[0]);
     const [expandedRows, setExpandedRows] = useState<{ [key: string]: boolean }>({});
@@ -134,8 +134,9 @@ const AutoTargetingView: React.FC<AutoTargetingViewProps> = ({ employees, produc
     }, [availableYears, year]);
 
     const calculatedTargets = useMemo(() => {
-        return calculateAutoTargets(employees, provinces, selectedProduct, totalMarketSize);
-    }, [employees, provinces, selectedProduct, totalMarketSize]);
+        const territories = [...provinces, ...medicalCenters];
+        return calculateAutoTargets(employees, territories, selectedProduct, totalMarketSize);
+    }, [employees, provinces, medicalCenters, selectedProduct, totalMarketSize]);
     
     const handleMarketSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const size = parseFloat(e.target.value) || 0;
@@ -172,7 +173,7 @@ const AutoTargetingView: React.FC<AutoTargetingViewProps> = ({ employees, produc
                  <table className="w-full text-sm text-right border-collapse">
                     <thead className="sticky top-0 z-10" style={{backgroundColor: 'var(--bg-color)'}}>
                         <tr>
-                            <th className="p-3 text-right font-semibold w-1/3">کارمند / استان / دوره</th>
+                            <th className="p-3 text-right font-semibold w-1/3">کارمند / منطقه / دوره</th>
                             <th className="p-3 font-semibold">% سهم از بازار</th>
                             <th className="p-3 font-semibold">% هدف کسب فرد</th>
                             <th className="p-3 font-semibold">تارگت (تعداد)</th>
@@ -196,13 +197,13 @@ const AutoTargetingView: React.FC<AutoTargetingViewProps> = ({ employees, produc
                                         col1={`${formatNumber(item.totalShare, 2)}%`}
                                         col2={`${formatNumber(item.targetAcquisitionRate, 1)}%`}
                                     />
-                                    {isEmpExpanded && <ProvinceRows provinces={item.provinces} level={1} parentKey={empKey}/>}
+                                    {isEmpExpanded && <TerritoryRows territories={item.territories} level={1} parentKey={empKey}/>}
                                 </React.Fragment>
                             )
                         }) : (
                             <tr>
                                 <td colSpan={5} className="text-center p-8 text-secondary">
-                                    {totalMarketSize > 0 ? 'هیچ استانی به کارمندان تخصیص داده نشده است.' : 'لطفا اندازه بازار را برای محاسبه اهداف وارد کنید.'}
+                                    {totalMarketSize > 0 ? 'هیچ استان یا مرکز درمانی به کارمندان تخصیص داده نشده است.' : 'لطفا اندازه بازار را برای محاسبه اهداف وارد کنید.'}
                                 </td>
                             </tr>
                         )}

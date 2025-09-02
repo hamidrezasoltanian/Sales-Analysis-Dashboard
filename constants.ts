@@ -1,4 +1,3 @@
-
 import { AppData, Province } from './types';
 
 export const LOCAL_STORAGE_KEY = 'unifiedDashboardData_v3_react';
@@ -79,5 +78,7 @@ export const INITIAL_APP_DATA: AppData = {
     ],
     salesTargets: {},
     provinces: INITIAL_PROVINCES,
+    medicalCenters: [],
     marketData: {},
+    backgroundImage: null,
 };

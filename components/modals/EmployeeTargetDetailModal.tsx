@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { EmployeeAutoTarget, SeasonalTarget, MonthlyTarget } from '../../types';
+import { EmployeeAutoTarget, SeasonalTarget, MonthlyTarget, TerritoryTargetDetail } from '../../types';
 
 const formatNumber = (value: number, decimals = 0) => {
     if (isNaN(value)) return '۰';
@@ -64,19 +63,19 @@ const SeasonalRows: React.FC<{ seasons: { [key: string]: SeasonalTarget }, level
     );
 };
 
-const ProvinceRows: React.FC<{ provinces: EmployeeAutoTarget['provinces'], level: number, parentKey: string }> = ({ provinces, level, parentKey }) => {
-    const [expandedProvinces, setExpandedProvinces] = useState<{ [key: string]: boolean }>({});
-    const toggleProvince = (provinceKey: string) => setExpandedProvinces(prev => ({ ...prev, [provinceKey]: !prev[provinceKey] }));
+const TerritoryRows: React.FC<{ territories: TerritoryTargetDetail[], level: number, parentKey: string }> = ({ territories, level, parentKey }) => {
+    const [expandedTerritories, setExpandedTerritories] = useState<{ [key: string]: boolean }>({});
+    const toggleTerritory = (territoryKey: string) => setExpandedTerritories(prev => ({ ...prev, [territoryKey]: !prev[territoryKey] }));
     
     return (
         <>
-            {provinces.map((provinceData) => {
-                 const key = `${parentKey}-${provinceData.provinceName}`;
-                 const isExpanded = !!expandedProvinces[key];
+            {territories.map((territoryData) => {
+                 const key = `${parentKey}-${territoryData.territoryName}`;
+                 const isExpanded = !!expandedTerritories[key];
                  return (
                      <React.Fragment key={key}>
-                         <Row label={provinceData.provinceName} quantity={provinceData.annual.quantity} value={provinceData.annual.value} level={level} isExpanded={isExpanded} onToggle={() => toggleProvince(key)} hasChildren={true} col1={`${formatNumber(provinceData.provinceShare, 2)}%`} />
-                         {isExpanded && <SeasonalRows seasons={provinceData.annual.seasons} level={level + 1} parentKey={key}/>}
+                         <Row label={territoryData.territoryName} quantity={territoryData.annual.quantity} value={territoryData.annual.value} level={level} isExpanded={isExpanded} onToggle={() => toggleTerritory(key)} hasChildren={true} col1={`${formatNumber(territoryData.territoryShare, 2)}%`} />
+                         {isExpanded && <SeasonalRows seasons={territoryData.annual.seasons} level={level + 1} parentKey={key}/>}
                      </React.Fragment>
                  );
             })}
@@ -100,7 +99,7 @@ const EmployeeTargetDetailModal: React.FC<EmployeeTargetDetailModalProps> = ({ t
                     <table className="w-full text-sm text-right border-collapse">
                         <thead className="sticky top-0 z-10" style={{backgroundColor: 'var(--bg-color)'}}>
                             <tr>
-                                <th className="p-3 text-right font-semibold w-1/3">استان / دوره</th>
+                                <th className="p-3 text-right font-semibold w-1/3">منطقه / دوره</th>
                                 <th className="p-3 font-semibold">% سهم از بازار</th>
                                 <th className="p-3 font-semibold">تارگت (تعداد)</th>
                                 <th className="p-3 font-semibold">تارگت (ریالی)</th>
@@ -117,7 +116,7 @@ const EmployeeTargetDetailModal: React.FC<EmployeeTargetDetailModalProps> = ({ t
                                 hasChildren={true}
                                 col1={`${formatNumber(targetData.totalShare, 2)}%`}
                             />
-                            {isExpanded && <ProvinceRows provinces={targetData.provinces} level={1} parentKey={`emp-${targetData.employeeId}`}/>}
+                            {isExpanded && <TerritoryRows territories={targetData.territories} level={1} parentKey={`emp-${targetData.employeeId}`}/>}
                         </tbody>
                     </table>
                 </div>

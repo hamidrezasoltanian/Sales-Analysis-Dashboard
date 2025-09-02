@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, Legend } from 'recharts';
 import { Employee, KpiConfigs, Province, AppData, Kpi, Product, SalesTargets, EmployeeAutoTarget } from '../types';
@@ -224,10 +223,11 @@ const KpiDashboardView: React.FC<KpiDashboardViewProps> = (props) => {
     
     // Calculate all auto targets once for the current year
     const employeeAutoTargets = useMemo(() => {
+        const territories = [...props.provinces, ...props.medicalCenters];
         // This calculation is annual, so we iterate through all products
         const targetsByProduct = props.products.map(product => {
             const totalMarketSize = props.marketData[product.id]?.[year] || 0;
-            return calculateAutoTargets(props.employees, props.provinces, product, totalMarketSize);
+            return calculateAutoTargets(props.employees, territories, product, totalMarketSize);
         });
 
         // We need to aggregate targets from all products for each employee
@@ -252,14 +252,14 @@ const KpiDashboardView: React.FC<KpiDashboardViewProps> = (props) => {
                     targetAcquisitionRate: emp.targetAcquisitionRate ?? 0,
                     totalShare: 0,
                     annual: { quantity: 0, value: 0, seasons: {} },
-                    provinces: []
+                    territories: []
                 };
             }
         });
 
         return Object.values(aggregatedTargets);
 
-    }, [props.employees, props.provinces, props.products, props.marketData, year]);
+    }, [props.employees, props.provinces, props.medicalCenters, props.products, props.marketData, year]);
 
 
     const { filteredAndSortedEmployees, teamStats } = useMemo(() => {

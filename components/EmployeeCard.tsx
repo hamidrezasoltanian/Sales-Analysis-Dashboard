@@ -1,10 +1,9 @@
-
 import React, { useState, useMemo } from 'react';
-import { Employee, KpiConfigs, Province, EmployeeAutoTarget } from '../types';
+import { Employee, KpiConfigs, Province, EmployeeAutoTarget, MedicalCenter } from '../types';
 import { calculateFinalScore, calculateKpiScore } from '../utils/calculations';
 import { HIGH_PERFORMANCE_THRESHOLD, LOW_PERFORMANCE_THRESHOLD } from '../constants';
 import TrendModal from './modals/TrendModal';
-import { printEmployeeReport } from '../utils/dataHandlers';
+import { printEmployeeReport, printEmployeeTargets } from '../utils/dataHandlers';
 import EmployeeTargetDetailModal from './modals/EmployeeTargetDetailModal';
 
 interface EmployeeCardProps {
@@ -12,6 +11,7 @@ interface EmployeeCardProps {
     period: string;
     kpiConfigs: KpiConfigs;
     provinces: Province[];
+    medicalCenters: MedicalCenter[];
     employeeAutoTarget?: EmployeeAutoTarget;
     recordScore: (employeeId: number, kpiId: number, period: string, value: number | null) => void;
     saveNote: (employeeId: number, period: string, note: string) => void;
@@ -42,15 +42,17 @@ const KpiItem: React.FC<{ kpi: Employee['kpis'][0], employeeId: number, period: 
     );
 };
 
-const EditEmployeeModal: React.FC<{ employee: Employee; provinces: Province[]; updateEmployee: EmployeeCardProps['updateEmployee']; closeModal: () => void; }> = ({ employee, provinces, updateEmployee, closeModal }) => {
+const EditEmployeeModal: React.FC<{ employee: Employee; provinces: Province[]; medicalCenters: MedicalCenter[]; updateEmployee: EmployeeCardProps['updateEmployee']; closeModal: () => void; }> = ({ employee, provinces, medicalCenters, updateEmployee, closeModal }) => {
     const [name, setName] = useState(employee.name);
     const [title, setTitle] = useState(employee.title);
     const [department, setDepartment] = useState(employee.department);
     const [targetAcquisitionRate, setTargetAcquisitionRate] = useState(employee.targetAcquisitionRate ?? 10);
     
-    const assignedProvinces = useMemo(() => {
-        return provinces.filter(p => p.assignedTo === employee.id).map(p => p.name).join('، ');
-    }, [provinces, employee.id]);
+    const assignedTerritories = useMemo(() => {
+        const assignedProvinces = provinces.filter(p => p.assignedTo === employee.id).map(p => p.name);
+        const assignedCenters = medicalCenters.filter(c => c.assignedTo === employee.id).map(c => c.name);
+        return [...assignedProvinces, ...assignedCenters].join('، ');
+    }, [provinces, medicalCenters, employee.id]);
 
     const handleSave = () => {
         if (name.trim() && title.trim() && department.trim()) {
@@ -79,11 +81,11 @@ const EditEmployeeModal: React.FC<{ employee: Employee; provinces: Province[]; u
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-1">استان‌های تخصیص‌یافته</label>
+                        <label className="block text-sm font-medium mb-1">مناطق تخصیص‌یافته</label>
                         <div className="w-full p-2 border rounded-lg bg-gray-100 text-gray-600 min-h-[40px]">
-                           {assignedProvinces || <span className="text-gray-400">هیچ استانی تخصیص داده نشده.</span>}
+                           {assignedTerritories || <span className="text-gray-400">هیچ منطقه‌ای تخصیص داده نشده.</span>}
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">برای تغییر استان‌ها به تب "مدیریت مرکزی" مراجعه کنید.</p>
+                        <p className="text-xs text-gray-500 mt-1">برای تغییر تخصیص‌ها به تب "مدیریت" یا "مدیریت تهران" مراجعه کنید.</p>
                     </div>
                 </div>
                 <div className="flex justify-end gap-3 mt-6">
@@ -96,7 +98,7 @@ const EditEmployeeModal: React.FC<{ employee: Employee; provinces: Province[]; u
 };
 
 
-const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, kpiConfigs, provinces, employeeAutoTarget, recordScore, saveNote, deleteEmployee, updateEmployee }) => {
+const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, kpiConfigs, provinces, medicalCenters, employeeAutoTarget, recordScore, saveNote, deleteEmployee, updateEmployee }) => {
     const finalScore = calculateFinalScore(employee, period, kpiConfigs);
     const scoreColorClass = finalScore >= HIGH_PERFORMANCE_THRESHOLD ? 'bg-green-500' : finalScore >= LOW_PERFORMANCE_THRESHOLD ? 'bg-yellow-500' : 'bg-red-500';
     const [isTrendModalOpen, setTrendModalOpen] = useState(false);
@@ -104,10 +106,21 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, kpiConfig
     const [isTargetDetailModalOpen, setTargetDetailModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'kpi' | 'targets'>('kpi');
 
-    const assignedProvinces = useMemo(() => provinces.filter(p => p.assignedTo === employee.id), [provinces, employee.id]);
+    const assignedTerritories = useMemo(() => {
+        const assignedProvinces = provinces.filter(p => p.assignedTo === employee.id);
+        const assignedCenters = medicalCenters.filter(c => c.assignedTo === employee.id);
+        return [...assignedProvinces, ...assignedCenters];
+    }, [provinces, medicalCenters, employee.id]);
 
-    const handlePrint = () => {
+    const handlePrintKpi = () => {
         printEmployeeReport(employee, period, kpiConfigs);
+    };
+
+    const handlePrintTargets = () => {
+        if (employeeAutoTarget) {
+            const year = period.split(' ')[1];
+            printEmployeeTargets(employee, employeeAutoTarget, year);
+        }
     };
     
     return (
@@ -120,11 +133,6 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, kpiConfig
                 <div className="flex items-center gap-2">
                     <button onClick={() => setTrendModalOpen(true)} title="نمایش روند" className="hover:text-blue-500 transition">
                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-                    </button>
-                    <button onClick={handlePrint} title="چاپ گزارش" className="hover:text-gray-700 transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                        </svg>
                     </button>
                     <button onClick={() => setEditModalOpen(true)} title="ویرایش" className="hover:text-purple-600 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -145,9 +153,14 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, kpiConfig
                     <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
                         <div className={`${scoreColorClass} h-2.5 rounded-full`} style={{ width: `${Math.min(finalScore, 100)}%` }}></div>
                     </div>
-                    <div className="text-center mb-4">
+                    <div className="flex justify-center items-center gap-4 mb-4">
                         <span className="font-bold">امتیاز نهایی: </span>
                         <span className={`px-3 py-1 text-sm rounded-full ${scoreColorClass.replace('bg-', 'text-').replace('-500', '-800')} ${scoreColorClass.replace('-500', '-100')}`}>{Math.round(finalScore).toLocaleString('fa-IR')} / 100</span>
+                         <button onClick={handlePrintKpi} title="چاپ گزارش KPI" className="text-gray-600 hover:text-gray-900 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                        </button>
                     </div>
                     <div className="space-y-2">
                         {employee.kpis.length > 0 ? employee.kpis.map(kpi => {
@@ -179,16 +192,21 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, kpiConfig
                                 <span className="font-bold text-green-600">{employeeAutoTarget.annual.value.toLocaleString('fa-IR')} تومان</span>
                             </div>
                             <div>
-                                <h5 className="font-semibold mb-1">استان‌های تحت پوشش:</h5>
+                                <h5 className="font-semibold mb-1">مناطق تحت پوشش:</h5>
                                 <div className="flex flex-wrap gap-2">
-                                    {assignedProvinces.length > 0 ? assignedProvinces.map(p => (
-                                        <span key={p.id} className="bg-gray-200 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full">{p.name}</span>
-                                    )) : <span className="text-secondary text-xs">هیچ استانی تخصیص داده نشده.</span>}
+                                    {assignedTerritories.length > 0 ? assignedTerritories.map(t => (
+                                        <span key={t.id} className="bg-gray-200 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full">{t.name}</span>
+                                    )) : <span className="text-secondary text-xs">هیچ منطقه‌ای تخصیص داده نشده.</span>}
                                 </div>
                             </div>
-                            <div className="text-center pt-2">
+                            <div className="flex justify-center items-center gap-4 pt-2">
                                 <button onClick={() => setTargetDetailModalOpen(true)} className="text-blue-600 hover:underline">
                                     مشاهده جزئیات کامل اهداف
+                                </button>
+                                <button onClick={handlePrintTargets} title="چاپ گزارش اهداف" className="text-gray-600 hover:text-gray-900 transition" disabled={!employeeAutoTarget}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -199,7 +217,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, kpiConfig
             )}
 
             {isTrendModalOpen && <TrendModal employee={employee} kpiConfigs={kpiConfigs} closeModal={() => setTrendModalOpen(false)} />}
-            {isEditModalOpen && <EditEmployeeModal employee={employee} provinces={provinces} updateEmployee={updateEmployee} closeModal={() => setEditModalOpen(false)} />}
+            {isEditModalOpen && <EditEmployeeModal employee={employee} provinces={provinces} medicalCenters={medicalCenters} updateEmployee={updateEmployee} closeModal={() => setEditModalOpen(false)} />}
             {isTargetDetailModalOpen && employeeAutoTarget && <EmployeeTargetDetailModal targetData={employeeAutoTarget} closeModal={() => setTargetDetailModalOpen(false)} />}
         </div>
     );

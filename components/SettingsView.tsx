@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SettingsViewProps, KpiConfigs, SalesConfig } from '../types';
 import SalesPlannerView from './SalesPlannerView';
@@ -167,6 +166,47 @@ const SalesConfigManager: React.FC<{
     );
 };
 
+const AppearanceManager: React.FC<{
+    theme: SettingsViewProps['theme'];
+    setTheme: SettingsViewProps['setTheme'];
+    backgroundImage: SettingsViewProps['backgroundImage'];
+    setBackgroundImage: SettingsViewProps['setBackgroundImage'];
+}> = ({ theme, setTheme, backgroundImage, setBackgroundImage }) => {
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setBackgroundImage(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+    
+    return (
+        <div className="mt-4 space-y-6">
+            <ThemeSelector theme={theme} setTheme={setTheme} />
+            <div>
+                 <label className="block text-sm font-medium mb-2">
+                    تصویر پس‌زمینه
+                </label>
+                <div className="flex items-center gap-3">
+                     <label htmlFor="bg-upload" className="cursor-pointer bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
+                        انتخاب تصویر
+                    </label>
+                    <input id="bg-upload" type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                    {backgroundImage && (
+                        <button onClick={() => setBackgroundImage(null)} className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                            حذف تصویر
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 // --- Main Component ---
 const SettingsView: React.FC<SettingsViewProps> = (props) => {
@@ -214,9 +254,12 @@ const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     />
                 )}
                 {activeTab === 'appearance' && (
-                    <div className="mt-4">
-                        <ThemeSelector theme={props.theme} setTheme={props.setTheme} />
-                    </div>
+                    <AppearanceManager 
+                        theme={props.theme} 
+                        setTheme={props.setTheme} 
+                        backgroundImage={props.backgroundImage}
+                        setBackgroundImage={props.setBackgroundImage}
+                    />
                 )}
             </div>
         </div>

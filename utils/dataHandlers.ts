@@ -1,4 +1,4 @@
-import { AppData, Employee, KpiConfigs } from '../types';
+import { AppData, Employee, KpiConfigs, EmployeeAutoTarget } from '../types';
 import { calculateFinalScore, calculateKpiScore } from './calculations';
 
 export const downloadBackup = (data: AppData) => {
@@ -11,7 +11,7 @@ export const downloadBackup = (data: AppData) => {
 };
 
 export const exportToCsv = (data: AppData) => {
-    const { employees, kpiConfigs, products, salesTargets, provinces } = data;
+    const { employees, kpiConfigs, products, salesTargets, provinces, medicalCenters } = data;
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
     const productMap = new Map(products.map(p => [p.id, p.name]));
     
@@ -66,34 +66,27 @@ export const exportToCsv = (data: AppData) => {
     csvContent += "\r\nEmployee Province Assignments\r\n";
     const provinceAssignHeaders = ["EmployeeID", "EmployeeName", "AssignedProvince"];
     csvContent += provinceAssignHeaders.join(",") + "\r\n";
-    // FIX: Property 'provinces' does not exist on type 'Employee'. This was changed during a data migration.
-    // The logic is updated to find assigned provinces by filtering the main `provinces` array.
     employees.forEach(emp => {
         const assignedProvinces = provinces.filter(p => p.assignedTo === emp.id);
         if (assignedProvinces.length > 0) {
             assignedProvinces.forEach(province => {
                 csvContent += [emp.id, `"${emp.name}"`, `"${province.name}"`].join(",") + "\r\n";
             });
-        } else {
-            csvContent += [emp.id, `"${emp.name}"`, ""].join(",") + "\r\n";
         }
     });
 
-    // --- Province Market Shares ---
-    csvContent += "\r\nProvince Market Shares\r\n";
-    const marketShareHeaders = ["ProvinceName", "ProductID", "ProductName", "MarketSharePercent"];
-    csvContent += marketShareHeaders.join(",") + "\r\n";
-    provinces.forEach(prov => {
-        Object.entries(prov.marketShare).forEach(([productId, share]) => {
-            const row = [
-                `"${prov.name}"`, productId,
-                `"${productMap.get(parseInt(productId)) || 'Unknown'}"`,
-                share
-            ];
-            csvContent += row.join(",") + "\r\n";
-        });
+    // --- Employee Medical Center Assignments ---
+    csvContent += "\r\nEmployee Medical Center Assignments\r\n";
+    const centerAssignHeaders = ["EmployeeID", "EmployeeName", "AssignedCenter"];
+    csvContent += centerAssignHeaders.join(",") + "\r\n";
+    employees.forEach(emp => {
+        const assignedCenters = medicalCenters.filter(c => c.assignedTo === emp.id);
+        if (assignedCenters.length > 0) {
+            assignedCenters.forEach(center => {
+                csvContent += [emp.id, `"${emp.name}"`, `"${center.name}"`].join(",") + "\r\n";
+            });
+        }
     });
-
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -169,6 +162,89 @@ export const printEmployeeReport = (employee: Employee, period: string, kpiConfi
         </html>
     `;
     
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+        doc.open();
+        doc.write(reportHtml);
+        doc.close();
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+    }
+    
+    setTimeout(() => {
+        document.body.removeChild(iframe);
+    }, 1000);
+};
+
+export const printEmployeeTargets = (employee: Employee, targetData: EmployeeAutoTarget, year: string) => {
+    const formatCurrency = (val: number) => val.toLocaleString('fa-IR');
+    const tableRows = targetData.territories.map(t => {
+        return `
+            <tr>
+                <td>${t.territoryName}</td>
+                <td>${t.territoryShare.toFixed(2)}%</td>
+                <td>${formatCurrency(t.annual.quantity)}</td>
+                <td>${formatCurrency(t.annual.value)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const reportHtml = `
+        <!DOCTYPE html>
+        <html lang="fa" dir="rtl">
+        <head>
+            <meta charset="UTF-8">
+            <title>گزارش اهداف فروش ${employee.name}</title>
+            <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Vazirmatn', sans-serif; direction: rtl; text-align: right; margin: 20px; line-height: 1.6; }
+                h1, h2 { text-align: center; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+                th { background-color: #f2f2f2; }
+                .total-row { font-weight: bold; background-color: #f9f9f9; }
+                @media print {
+                    @page { size: A4; margin: 20mm; }
+                    body { -webkit-print-color-adjust: exact; }
+                }
+            </style>
+        </head>
+        <body>
+            <h1>گزارش اهداف فروش</h1>
+            <p><strong>نام کارمند:</strong> ${employee.name}</p>
+            <p><strong>سال:</strong> ${year}</p>
+            <hr>
+            <h2>جزئیات اهداف سالانه</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>منطقه (استان / مرکز)</th>
+                        <th>سهم از بازار منطقه (%)</th>
+                        <th>تارگت سالانه (تعداد)</th>
+                        <th>تارگت سالانه (ریالی)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRows}
+                    <tr class="total-row">
+                        <td>مجموع کل</td>
+                        <td>${targetData.totalShare.toFixed(2)}%</td>
+                        <td>${formatCurrency(targetData.annual.quantity)}</td>
+                        <td>${formatCurrency(targetData.annual.value)}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </body>
+        </html>
+    `;
+
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
     iframe.style.width = '0';
