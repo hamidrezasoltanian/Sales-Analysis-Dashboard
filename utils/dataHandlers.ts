@@ -1,9 +1,13 @@
 
 import { AppData, Employee, KpiConfigs, EmployeeAutoTarget } from '../types.ts';
 import { calculateFinalScore, calculateKpiScore } from './calculations.ts';
+import { BACKUP_VERSION } from '../constants.ts';
 
 export const downloadBackup = (data: AppData) => {
-    const dataStr = JSON.stringify(data, null, 2);
+    const dataToSave = { ...data, backup_version: BACKUP_VERSION };
+    // The background image is a blob URL and should not be part of the backup file.
+    delete dataToSave.backgroundImage;
+    const dataStr = JSON.stringify(dataToSave, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);

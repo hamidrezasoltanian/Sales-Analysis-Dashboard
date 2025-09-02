@@ -100,6 +100,7 @@ export interface MarketData {
 }
 
 export interface AppData {
+    backup_version?: number;
     employees: Employee[];
     kpiConfigs: KpiConfigs;
     salesConfig: SalesConfig;

@@ -2,8 +2,9 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode, useCallback } from 'react';
 import { produce } from 'immer';
 import { AppData, Employee, Kpi, Product, Province, SalesConfig, MedicalCenter } from '../types.ts';
-import { LOCAL_STORAGE_KEY, INITIAL_APP_DATA } from '../constants.ts';
+import { LOCAL_STORAGE_KEY, INITIAL_APP_DATA, BACKUP_VERSION } from '../constants.ts';
 import { getBackgroundImage, saveBackgroundImage, deleteBackgroundImage } from '../utils/db.ts';
+import { useNotification } from './NotificationContext.tsx';
 
 // Data validation and migration logic, extracted from App.tsx
 const loadDataFromLocalStorage = (): AppData => {
@@ -69,6 +70,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [appData, setAppData] = useState<AppData>(loadDataFromLocalStorage);
     const [quickAddModalOpen, setQuickAddModalOpen] = useState<AppContextType['quickAddModalOpen']>(false);
+    const { showNotification } = useNotification();
 
     // Effect to load background image from IndexedDB on initial app load
     useEffect(() => {
@@ -146,6 +148,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const saveKpiConfig = useCallback((id: string, name: string, maxPoints: number, formula: string) => updateAppData(d => { d.kpiConfigs[id] = { name, maxPoints, formula }; }), [updateAppData]);
     const deleteKpiConfig = useCallback((id: string) => updateAppData(d => { delete d.kpiConfigs[id]; d.employees.forEach(e => { e.kpis = e.kpis.filter(k => k.type !== id); }); }), [updateAppData]);
     const restoreData = useCallback((data: AppData) => {
+        if (!data.backup_version) {
+            showNotification('فایل پشتیبان قدیمی شناسایی شد. بازیابی با بهترین تلاش انجام می‌شود.', 'info');
+        } else if (data.backup_version > BACKUP_VERSION) {
+            showNotification(`این فایل پشتیبان با نسخه جدیدتری از برنامه ساخته شده است. لطفاً برنامه را به‌روز کنید.`, 'error');
+            return;
+        }
+
         const validatedData = produce(INITIAL_APP_DATA, draft => {
              Object.assign(draft, data);
              draft.availableYears = data.availableYears?.length > 0 ? data.availableYears : [1404];
@@ -157,7 +166,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAppData(validatedData);
         // After restoring, clear any existing background image from DB as well
         setBackgroundImage(null);
-    }, [setBackgroundImage]);
+    }, [setBackgroundImage, showNotification]);
 
     const value = {
         appData,
