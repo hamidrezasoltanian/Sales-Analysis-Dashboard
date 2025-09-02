@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { produce } from 'immer';
-import { Employee, Product, MedicalCenter } from '../types';
+import { Employee, Product, MedicalCenter, MarketData } from '../types';
+import TehranMonitorModal from './modals/TehranMonitorModal';
 
 // --- Sub-components for TehranManagementView ---
 
@@ -101,6 +102,8 @@ interface TehranManagementViewProps {
     employees: Employee[];
     products: Product[];
     medicalCenters: MedicalCenter[];
+    marketData: MarketData;
+    availableYears: number[];
     saveMedicalCenter: (center: MedicalCenter) => void;
     deleteMedicalCenter: (centerId: string) => void;
     saveMedicalCenters: (centers: MedicalCenter[]) => void;
@@ -108,15 +111,39 @@ interface TehranManagementViewProps {
 }
 
 const TehranManagementView: React.FC<TehranManagementViewProps> = (props) => {
+    const [isMonitorModalOpen, setMonitorModalOpen] = useState(false);
     return (
         <div className="fade-in">
-            <header className="mb-6">
-                <h1 className="text-3xl md:text-4xl font-bold">مدیریت تهران</h1>
-                <p className="mt-2 text-secondary">مدیریت مراکز درمانی، تخصیص فروش و سهم بازار</p>
+            <header className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h1 className="text-3xl md:text-4xl font-bold">مدیریت تهران</h1>
+                    <p className="mt-2 text-secondary">مدیریت مراکز درمانی، تخصیص فروش و سهم بازار</p>
+                </div>
+                 <button 
+                    onClick={() => setMonitorModalOpen(true)}
+                    className="btn-purple text-white px-4 py-2 rounded-lg shadow hover:shadow-lg transition flex items-center gap-2"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
+                        <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
+                    </svg>
+                    <span>پایش لحظه‌ای مراکز</span>
+                </button>
             </header>
             <div className="card border rounded-lg p-6">
                 <MedicalCenterManager {...props} />
             </div>
+
+            {isMonitorModalOpen && (
+                <TehranMonitorModal
+                    closeModal={() => setMonitorModalOpen(false)}
+                    medicalCenters={props.medicalCenters}
+                    products={props.products}
+                    employees={props.employees}
+                    marketData={props.marketData}
+                    availableYears={props.availableYears}
+                />
+            )}
         </div>
     );
 };

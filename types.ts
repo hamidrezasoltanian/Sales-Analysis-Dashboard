@@ -118,6 +118,7 @@ export enum View {
     SalesTargeting = 'salesTargeting',
     Management = 'management',
     TehranManagement = 'tehranManagement',
+    EmployeeProfile = 'employeeProfile',
     Settings = 'settings',
 }
 

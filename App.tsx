@@ -8,6 +8,7 @@ import ManagementView from './components/ManagementView';
 import SalesTargetingPage from './components/SalesTargetingPage';
 import SettingsView from './components/SettingsView';
 import TehranManagementView from './components/TehranManagementView';
+import EmployeeProfileView from './components/EmployeeProfileView';
 
 const App: React.FC = () => {
     const [appData, setAppData] = useState<AppData>(() => {
@@ -268,7 +269,9 @@ if (province) province.assignedTo = employeeId;
             case View.Management:
                 return <ManagementView {...appData} saveProduct={saveProduct} deleteProduct={deleteProduct} saveProvinces={saveProvinces} updateProvinceAssignment={updateProvinceAssignment} />;
              case View.TehranManagement:
-                return <TehranManagementView employees={appData.employees} products={appData.products} medicalCenters={appData.medicalCenters} saveMedicalCenter={saveMedicalCenter} deleteMedicalCenter={deleteMedicalCenter} saveMedicalCenters={saveMedicalCenters} updateMedicalCenterAssignment={updateMedicalCenterAssignment} />;
+                return <TehranManagementView {...appData} saveMedicalCenter={saveMedicalCenter} deleteMedicalCenter={deleteMedicalCenter} saveMedicalCenters={saveMedicalCenters} updateMedicalCenterAssignment={updateMedicalCenterAssignment} />;
+            case View.EmployeeProfile:
+                return <EmployeeProfileView {...appData} />;
             case View.Settings:
                 return <SettingsView {...appData} updateSalesPlannerState={updateSalesPlannerState} saveKpiConfig={saveKpiConfig} deleteKpiConfig={deleteKpiConfig} restoreData={restoreData} theme={theme} setTheme={setTheme} updateSalesConfig={updateSalesConfig} setBackgroundImage={setBackgroundImage}/>;
             default:
