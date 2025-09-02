@@ -1,5 +1,7 @@
+
 import React, { useState } from 'react';
-import { EmployeeAutoTarget, SeasonalTarget, MonthlyTarget, TerritoryTargetDetail } from '../../types';
+import { EmployeeAutoTarget, SeasonalTarget, MonthlyTarget, TerritoryTargetDetail } from '../../types.ts';
+import Modal from '../common/Modal.tsx';
 
 const formatNumber = (value: number, decimals = 0) => {
     if (isNaN(value)) return '۰';
@@ -92,39 +94,37 @@ const EmployeeTargetDetailModal: React.FC<EmployeeTargetDetailModalProps> = ({ t
      const [isExpanded, setIsExpanded] = useState(true);
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={closeModal}>
-            <div className="w-11/12 md:max-w-4xl rounded-2xl shadow-2xl p-6 card" onClick={e => e.stopPropagation()}>
-                <h3 className="text-2xl font-bold mb-4">جزئیات کامل اهداف: {targetData.employeeName}</h3>
-                 <div className="max-h-[70vh] overflow-y-auto border rounded-lg">
-                    <table className="w-full text-sm text-right border-collapse">
-                        <thead className="sticky top-0 z-10" style={{backgroundColor: 'var(--bg-color)'}}>
-                            <tr>
-                                <th className="p-3 text-right font-semibold w-1/3">منطقه / دوره</th>
-                                <th className="p-3 font-semibold">% سهم از بازار</th>
-                                <th className="p-3 font-semibold">تارگت (تعداد)</th>
-                                <th className="p-3 font-semibold">تارگت (ریالی)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <Row 
-                                label="مجموع کل"
-                                quantity={targetData.annual.quantity}
-                                value={targetData.annual.value}
-                                level={0}
-                                isExpanded={isExpanded}
-                                onToggle={() => setIsExpanded(!isExpanded)}
-                                hasChildren={true}
-                                col1={`${formatNumber(targetData.totalShare, 2)}%`}
-                            />
-                            {isExpanded && <TerritoryRows territories={targetData.territories} level={1} parentKey={`emp-${targetData.employeeId}`}/>}
-                        </tbody>
-                    </table>
-                </div>
-                 <div className="text-center mt-6">
-                    <button onClick={closeModal} className="bg-gray-300 text-gray-800 px-8 py-2 rounded-lg hover:bg-gray-400 transition">بستن</button>
-                </div>
+        <Modal isOpen={true} onClose={closeModal} size="4xl">
+            <h3 className="text-2xl font-bold mb-4">جزئیات کامل اهداف: {targetData.employeeName}</h3>
+             <div className="max-h-[70vh] overflow-y-auto border rounded-lg">
+                <table className="w-full text-sm text-right border-collapse">
+                    <thead className="sticky top-0 z-10" style={{backgroundColor: 'var(--bg-color)'}}>
+                        <tr>
+                            <th className="p-3 text-right font-semibold w-1/3">منطقه / دوره</th>
+                            <th className="p-3 font-semibold">% سهم از بازار</th>
+                            <th className="p-3 font-semibold">تارگت (تعداد)</th>
+                            <th className="p-3 font-semibold">تارگت (ریالی)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <Row 
+                            label="مجموع کل"
+                            quantity={targetData.annual.quantity}
+                            value={targetData.annual.value}
+                            level={0}
+                            isExpanded={isExpanded}
+                            onToggle={() => setIsExpanded(!isExpanded)}
+                            hasChildren={true}
+                            col1={`${formatNumber(targetData.totalShare, 2)}%`}
+                        />
+                        {isExpanded && <TerritoryRows territories={targetData.territories} level={1} parentKey={`emp-${targetData.employeeId}`}/>}
+                    </tbody>
+                </table>
             </div>
-        </div>
+             <div className="text-center mt-6">
+                <button onClick={closeModal} className="bg-gray-300 text-gray-800 px-8 py-2 rounded-lg hover:bg-gray-400 transition">بستن</button>
+            </div>
+        </Modal>
     );
 };
 

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { Employee, Product, SalesTargets } from '../types';
-import { getPreviousPeriod } from '../utils/calculations';
+import { Employee, Product, SalesTargets } from '../types.ts';
+import { getPreviousPeriod } from '../utils/calculations.ts';
 
 interface SalesTargetingViewProps {
     employees: Employee[];

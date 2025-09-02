@@ -1,62 +1,27 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { produce } from 'immer';
-import { Employee, View, Theme, AppData, Product, Province, Kpi, SalesConfig, MedicalCenter } from './types';
-import { LOCAL_STORAGE_KEY, INITIAL_APP_DATA } from './constants';
-import Sidebar from './components/Sidebar';
-import KpiDashboardView from './components/KpiDashboardView';
-import ManagementView from './components/ManagementView';
-import SalesTargetingPage from './components/SalesTargetingPage';
-import SettingsView from './components/SettingsView';
-import TehranManagementView from './components/TehranManagementView';
-import EmployeeProfileView from './components/EmployeeProfileView';
 
-const App: React.FC = () => {
-    const [appData, setAppData] = useState<AppData>(() => {
-        try {
-            const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (savedData) {
-                const parsed = JSON.parse(savedData);
-                // Data migration and validation logic
-                const validatedData = produce(INITIAL_APP_DATA, draft => {
-                    Object.assign(draft, parsed);
-                    draft.availableYears = parsed.availableYears?.length > 0 ? parsed.availableYears : [1404];
-                    draft.employees.forEach((emp: Employee) => {
-                        emp.targetAcquisitionRate = emp.targetAcquisitionRate ?? 10;
-                        if ('provinces' in emp) delete (emp as any).provinces;
-                    });
-                    draft.provinces.forEach((prov: Province) => {
-                        prov.assignedTo = prov.assignedTo ?? null;
-                    });
-                    if (!draft.medicalCenters) draft.medicalCenters = []; // Migration for medical centers
-                    if (!draft.backgroundImage) draft.backgroundImage = null; // Migration for background image
+import React, { useState, useEffect, Suspense } from 'react';
+import { View, Theme } from './types.ts';
+import { AppProvider, useAppContext } from './contexts/AppContext.tsx';
+import { NotificationProvider } from './contexts/NotificationContext.tsx';
+import Sidebar from './components/Sidebar.tsx';
+import PageLoader from './components/common/PageLoader.tsx';
 
-                    if (parsed.marketData) {
-                        Object.keys(parsed.marketData).forEach(productId => {
-                            const oldEntry = parsed.marketData[productId];
-                            if (oldEntry && typeof oldEntry.size !== 'undefined' && typeof oldEntry.year !== 'undefined') {
-                                draft.marketData[productId] = { [oldEntry.year]: oldEntry.size };
-                            }
-                        });
-                    }
-                });
-                return validatedData;
-            }
-        } catch (error) {
-            console.error('Error loading data from localStorage:', error);
-        }
-        return INITIAL_APP_DATA;
-    });
+// Use static imports instead of lazy loading to fix module resolution error
+import KpiDashboardView from './components/KpiDashboardView.tsx';
+import SalesTargetingPage from './components/SalesTargetingPage.tsx';
+import ManagementView from './components/ManagementView.tsx';
+import TehranManagementView from './components/TehranManagementView.tsx';
+import EmployeeProfileView from './components/EmployeeProfileView.tsx';
+import SettingsView from './components/SettingsView.tsx';
 
+const AppContent: React.FC = () => {
+    const { appData } = useAppContext();
     const [activeView, setActiveView] = useState<View>(View.Dashboard);
     const [theme, setTheme] = useState<Theme>(Theme.Default);
 
     useEffect(() => {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appData));
-    }, [appData]);
-
-    useEffect(() => {
         document.body.className = `theme-${theme}`;
-         if (appData.backgroundImage) {
+        if (appData.backgroundImage) {
             document.body.style.backgroundImage = `url(${appData.backgroundImage})`;
             document.body.classList.add('with-background');
         } else {
@@ -65,217 +30,15 @@ const App: React.FC = () => {
         }
     }, [theme, appData.backgroundImage]);
     
-    const updateAppData = (updater: (draft: AppData) => void) => {
-        setAppData(produce(updater));
-    };
-
-    // --- Year Management ---
-    const addYear = (year: number) => {
-        updateAppData(draft => {
-            if (!draft.availableYears.includes(year)) {
-                draft.availableYears.push(year);
-                draft.availableYears.sort((a, b) => b - a);
-            }
-        });
-    };
-
-    // --- Employee & KPI Management ---
-    const addEmployee = (name: string, title: string, department: string) => {
-        updateAppData(draft => {
-            draft.employees.push({
-                id: Date.now(), name, title, department, kpis: [], notes: {}, targetAcquisitionRate: 10,
-            });
-        });
-    };
-    
-    const updateEmployee = (id: number, name: string, title: string, department: string, targetAcquisitionRate: number) => {
-         updateAppData(draft => {
-            const employee = draft.employees.find(emp => emp.id === id);
-            if (employee) {
-                employee.name = name;
-                employee.title = title;
-                employee.department = department;
-                employee.targetAcquisitionRate = targetAcquisitionRate;
-            }
-        });
-    };
-
-    const deleteEmployee = (id: number) => {
-        updateAppData(draft => {
-            draft.employees = draft.employees.filter(emp => emp.id !== id);
-            draft.provinces.forEach(prov => {
-                if (prov.assignedTo === id) prov.assignedTo = null;
-            });
-            draft.medicalCenters.forEach(center => {
-                if (center.assignedTo === id) center.assignedTo = null;
-            });
-        });
-    };
-
-    const addKpiToEmployee = (employeeId: number, type: string, target?: number) => {
-        updateAppData(draft => {
-            const employee = draft.employees.find(e => e.id === employeeId);
-            if (employee) {
-                const newKpi: Kpi = { id: Date.now(), type, scores: {} };
-                if (target !== undefined) newKpi.target = target;
-                employee.kpis.push(newKpi);
-            }
-        });
-    };
-
-    const recordScore = (employeeId: number, kpiId: number, period: string, value: number | null) => {
-        updateAppData(draft => {
-            const kpi = draft.employees.find(e => e.id === employeeId)?.kpis.find(k => k.id === kpiId);
-            if (kpi) {
-                if (value === null || isNaN(value)) delete kpi.scores[period];
-                else kpi.scores[period] = value;
-            }
-        });
-    };
-
-    const saveNote = (employeeId: number, period: string, note: string) => {
-         updateAppData(draft => {
-            const employee = draft.employees.find(emp => emp.id === employeeId);
-            if (employee) {
-                if (note.trim()) employee.notes[period] = note;
-                else delete employee.notes[period];
-            }
-        });
-    };
-
-    // --- Product & Province Management ---
-    const saveProduct = (product: Product) => {
-        updateAppData(draft => {
-            const index = draft.products.findIndex(p => p.id === product.id);
-            if (index > -1) draft.products[index] = product;
-            else draft.products.push({ ...product, id: Date.now() });
-        });
-    };
-
-    const deleteProduct = (productId: number) => {
-        updateAppData(draft => {
-            draft.products = draft.products.filter(p => p.id !== productId);
-        });
-    };
-
-    const saveProvinces = (provinces: Province[]) => {
-        updateAppData(draft => { draft.provinces = provinces; });
-    };
-
-    const updateProvinceAssignment = (provinceId: string, employeeId: number | null) => {
-        updateAppData(draft => {
-            const province = draft.provinces.find(p => p.id === provinceId);
-if (province) province.assignedTo = employeeId;
-        });
-    };
-
-    // --- Tehran Medical Center Management ---
-    const saveMedicalCenter = (center: MedicalCenter) => {
-        updateAppData(draft => {
-            const index = draft.medicalCenters.findIndex(c => c.id === center.id);
-            if (index > -1) draft.medicalCenters[index] = center;
-            else draft.medicalCenters.push({ ...center, id: `mc_${Date.now()}` });
-        });
-    };
-
-    const deleteMedicalCenter = (centerId: string) => {
-        updateAppData(draft => {
-            draft.medicalCenters = draft.medicalCenters.filter(c => c.id !== centerId);
-        });
-    };
-    
-    const saveMedicalCenters = (centers: MedicalCenter[]) => {
-        updateAppData(draft => { draft.medicalCenters = centers; });
-    };
-
-    const updateMedicalCenterAssignment = (centerId: string, employeeId: number | null) => {
-        updateAppData(draft => {
-            const center = draft.medicalCenters.find(c => c.id === centerId);
-            if (center) center.assignedTo = employeeId;
-        });
-    };
-
-    // --- Targeting & Planner Management ---
-    const updateMarketData = (productId: string, year: number, size: number) => {
-        updateAppData(draft => {
-            if (!draft.marketData[productId]) draft.marketData[productId] = {};
-            draft.marketData[productId][year] = size;
-        });
-    };
-
-    const saveSalesTargetData = (employeeId: number, period: string, productId: number, type: 'target' | 'actual', value: number | null) => {
-        updateAppData(draft => {
-            const empTargets = draft.salesTargets[employeeId] ??= {};
-            const periodTargets = empTargets[period] ??= {};
-            const productTarget = periodTargets[productId] ??= { target: 0, actual: null };
-            productTarget[type] = value;
-        });
-    };
-
-    const updateSalesPlannerState = (newState: Partial<typeof INITIAL_APP_DATA.salesPlannerState>) => {
-        updateAppData(draft => {
-            draft.salesPlannerState = { ...draft.salesPlannerState, ...newState };
-        });
-    };
-    
-    // --- App Settings & Data ---
-    const updateSalesConfig = (newConfig: Partial<SalesConfig>) => {
-        updateAppData(draft => {
-            draft.salesConfig = { ...draft.salesConfig, ...newConfig };
-        });
-    };
-
-     const setBackgroundImage = (imageData: string | null) => {
-        updateAppData(draft => {
-            draft.backgroundImage = imageData;
-        });
-    };
-    
-    const saveKpiConfig = (id: string, name: string, maxPoints: number, formula: string) => {
-        updateAppData(draft => {
-            draft.kpiConfigs[id] = { name, maxPoints, formula };
-        });
-    };
-
-    const deleteKpiConfig = (id: string) => {
-        updateAppData(draft => {
-            delete draft.kpiConfigs[id];
-            draft.employees.forEach(emp => {
-                emp.kpis = emp.kpis.filter(kpi => kpi.type !== id);
-            });
-        });
-    };
-
-    const restoreData = useCallback((data: AppData) => {
-        // Use validation/migration logic from initial state setup
-        const validatedData = produce(INITIAL_APP_DATA, draft => {
-             Object.assign(draft, data);
-             // Ensure critical arrays/objects exist
-             draft.availableYears = data.availableYears?.length > 0 ? data.availableYears : [1404];
-             draft.employees.forEach(emp => { emp.targetAcquisitionRate ??= 10; });
-             draft.provinces.forEach(prov => { prov.assignedTo ??= null; });
-             if (!draft.medicalCenters) draft.medicalCenters = [];
-             if (!draft.backgroundImage) draft.backgroundImage = null;
-        });
-        setAppData(validatedData);
-    }, []);
-
     const renderActiveView = () => {
         switch (activeView) {
-            case View.Dashboard:
-                return <KpiDashboardView {...appData} addYear={addYear} recordScore={recordScore} saveNote={saveNote} deleteEmployee={deleteEmployee} updateEmployee={updateEmployee} addEmployee={addEmployee} addKpiToEmployee={addKpiToEmployee} />;
-            case View.SalesTargeting:
-                return <SalesTargetingPage {...appData} updateMarketData={updateMarketData} saveSalesTargetData={saveSalesTargetData} />;
-            case View.Management:
-                return <ManagementView {...appData} saveProduct={saveProduct} deleteProduct={deleteProduct} saveProvinces={saveProvinces} updateProvinceAssignment={updateProvinceAssignment} />;
-             case View.TehranManagement:
-                return <TehranManagementView {...appData} saveMedicalCenter={saveMedicalCenter} deleteMedicalCenter={deleteMedicalCenter} saveMedicalCenters={saveMedicalCenters} updateMedicalCenterAssignment={updateMedicalCenterAssignment} />;
-            case View.EmployeeProfile:
-                return <EmployeeProfileView {...appData} />;
-            case View.Settings:
-                return <SettingsView {...appData} updateSalesPlannerState={updateSalesPlannerState} saveKpiConfig={saveKpiConfig} deleteKpiConfig={deleteKpiConfig} restoreData={restoreData} theme={theme} setTheme={setTheme} updateSalesConfig={updateSalesConfig} setBackgroundImage={setBackgroundImage}/>;
-            default:
-                return null;
+            case View.Dashboard: return <KpiDashboardView />;
+            case View.SalesTargeting: return <SalesTargetingPage />;
+            case View.Management: return <ManagementView />;
+            case View.TehranManagement: return <TehranManagementView />;
+            case View.EmployeeProfile: return <EmployeeProfileView />;
+            case View.Settings: return <SettingsView theme={theme} setTheme={setTheme} />;
+            default: return null;
         }
     };
 
@@ -283,9 +46,21 @@ if (province) province.assignedTo = employeeId;
         <div className="flex">
             <Sidebar activeView={activeView} setActiveView={setActiveView} />
             <main className="flex-1 p-6 md:p-8 h-screen overflow-y-auto">
-                {renderActiveView()}
+                <Suspense fallback={<PageLoader />}>
+                    {renderActiveView()}
+                </Suspense>
             </main>
         </div>
+    );
+};
+
+const App: React.FC = () => {
+    return (
+        <AppProvider>
+            <NotificationProvider>
+                <AppContent />
+            </NotificationProvider>
+        </AppProvider>
     );
 };
 

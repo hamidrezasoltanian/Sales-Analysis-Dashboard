@@ -1,19 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { produce } from 'immer';
-import { Employee, Product, MedicalCenter, MarketData } from '../types';
-import TehranMonitorModal from './modals/TehranMonitorModal';
+import { MedicalCenter } from '../types.ts';
+import TehranMonitorModal from './modals/TehranMonitorModal.tsx';
+import { useAppContext } from '../contexts/AppContext.tsx';
 
 // --- Sub-components for TehranManagementView ---
 
-const MedicalCenterManager: React.FC<{
-    medicalCenters: MedicalCenter[];
-    products: Product[];
-    employees: Employee[];
-    saveMedicalCenter: (center: MedicalCenter) => void;
-    deleteMedicalCenter: (centerId: string) => void;
-    saveMedicalCenters: (centers: MedicalCenter[]) => void;
-    updateMedicalCenterAssignment: (centerId: string, employeeId: number | null) => void;
-}> = ({ medicalCenters, products, employees, saveMedicalCenter, deleteMedicalCenter, saveMedicalCenters, updateMedicalCenterAssignment }) => {
+const MedicalCenterManager: React.FC = () => {
+    const { appData: { medicalCenters, products, employees }, saveMedicalCenter, deleteMedicalCenter, saveMedicalCenters, updateMedicalCenterAssignment } = useAppContext();
     const [editingCenter, setEditingCenter] = useState<MedicalCenter | null>(null);
     const [localCenters, setLocalCenters] = useState(medicalCenters);
 
@@ -98,20 +93,10 @@ const MedicalCenterManager: React.FC<{
 };
 
 // --- Main Component ---
-interface TehranManagementViewProps {
-    employees: Employee[];
-    products: Product[];
-    medicalCenters: MedicalCenter[];
-    marketData: MarketData;
-    availableYears: number[];
-    saveMedicalCenter: (center: MedicalCenter) => void;
-    deleteMedicalCenter: (centerId: string) => void;
-    saveMedicalCenters: (centers: MedicalCenter[]) => void;
-    updateMedicalCenterAssignment: (centerId: string, employeeId: number | null) => void;
-}
-
-const TehranManagementView: React.FC<TehranManagementViewProps> = (props) => {
+const TehranManagementView: React.FC = () => {
     const [isMonitorModalOpen, setMonitorModalOpen] = useState(false);
+    const { appData } = useAppContext();
+    
     return (
         <div className="fade-in">
             <header className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -131,17 +116,17 @@ const TehranManagementView: React.FC<TehranManagementViewProps> = (props) => {
                 </button>
             </header>
             <div className="card border rounded-lg p-6">
-                <MedicalCenterManager {...props} />
+                <MedicalCenterManager />
             </div>
 
             {isMonitorModalOpen && (
                 <TehranMonitorModal
                     closeModal={() => setMonitorModalOpen(false)}
-                    medicalCenters={props.medicalCenters}
-                    products={props.products}
-                    employees={props.employees}
-                    marketData={props.marketData}
-                    availableYears={props.availableYears}
+                    medicalCenters={appData.medicalCenters}
+                    products={appData.products}
+                    employees={appData.employees}
+                    marketData={appData.marketData}
+                    availableYears={appData.availableYears}
                 />
             )}
         </div>

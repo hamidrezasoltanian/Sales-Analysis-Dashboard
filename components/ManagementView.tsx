@@ -1,15 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { produce } from 'immer';
-import { Employee, Product, Province, MarketData } from '../types';
-import ProvinceDetailModal from './modals/ProvinceDetailModal';
+import { Employee, Product, Province } from '../types.ts';
+import ProvinceDetailModal from './modals/ProvinceDetailModal.tsx';
+import { useAppContext } from '../contexts/AppContext.tsx';
 
 // --- Sub-components for ManagementView ---
-const ProductManager: React.FC<{
-    products: Product[];
-    saveProduct: (product: Product) => void;
-    deleteProduct: (productId: number) => void;
-}> = ({ products, saveProduct, deleteProduct }) => {
+const ProductManager: React.FC = () => {
+    const { appData: { products }, saveProduct, deleteProduct } = useAppContext();
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -56,15 +54,8 @@ const ProductManager: React.FC<{
     );
 };
 
-const ProvinceManager: React.FC<{
-    provinces: Province[];
-    products: Product[];
-    employees: Employee[];
-    marketData: MarketData;
-    saveProvinces: (provinces: Province[]) => void;
-    updateProvinceAssignment: (provinceId: string, employeeId: number | null) => void;
-    yearForAnalysis: number;
-}> = ({ provinces, products, employees, marketData, saveProvinces, updateProvinceAssignment, yearForAnalysis }) => {
+const ProvinceManager: React.FC<{ yearForAnalysis: number; }> = ({ yearForAnalysis }) => {
+    const { appData: { provinces, products, employees, marketData }, saveProvinces, updateProvinceAssignment } = useAppContext();
     const [localProvinces, setLocalProvinces] = useState(provinces);
     const [selectedProvince, setSelectedProvince] = useState<Province | null>(null);
 
@@ -120,25 +111,14 @@ const ProvinceManager: React.FC<{
 };
 
 // --- Main Component ---
-interface ManagementViewProps {
-    employees: Employee[];
-    products: Product[];
-    provinces: Province[];
-    marketData: MarketData;
-    saveProduct: (product: Product) => void;
-    deleteProduct: (productId: number) => void;
-    saveProvinces: (provinces: Province[]) => void;
-    updateProvinceAssignment: (provinceId: string, employeeId: number | null) => void;
-    availableYears: number[];
-}
-
-const ManagementView: React.FC<ManagementViewProps> = (props) => {
+const ManagementView: React.FC = () => {
+    const { appData: { availableYears } } = useAppContext();
     const [activeTab, setActiveTab] = useState<'products' | 'provinces'>('provinces');
-    const [year, setYear] = useState(props.availableYears[0]);
+    const [year, setYear] = useState(availableYears[0]);
     
     useEffect(() => {
-        if (!props.availableYears.includes(year)) setYear(props.availableYears[0]);
-    }, [props.availableYears, year]);
+        if (!availableYears.includes(year)) setYear(availableYears[0]);
+    }, [availableYears, year]);
 
     return (
         <div className="fade-in">
@@ -157,14 +137,14 @@ const ManagementView: React.FC<ManagementViewProps> = (props) => {
                          <div className="flex justify-end items-center mb-4">
                             <label className="text-sm font-medium me-2">سال تحلیل:</label>
                             <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="p-2 border rounded-lg bg-gray-50 text-gray-700">
-                                {props.availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
                             </select>
                          </div>
-                        <ProvinceManager {...props} yearForAnalysis={year} />
+                        <ProvinceManager yearForAnalysis={year} />
                     </div>
                 )}
                 {activeTab === 'products' && (
-                    <ProductManager products={props.products} saveProduct={props.saveProduct} deleteProduct={props.deleteProduct} />
+                    <ProductManager />
                 )}
             </div>
         </div>

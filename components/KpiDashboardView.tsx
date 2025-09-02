@@ -1,20 +1,12 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, Legend } from 'recharts';
-import { Employee, KpiConfigs, Province, AppData, Kpi, Product, SalesTargets, EmployeeAutoTarget } from '../types';
-import { calculateFinalScore, calculateAutoTargets } from '../utils/calculations';
-import { HIGH_PERFORMANCE_THRESHOLD, LOW_PERFORMANCE_THRESHOLD } from '../constants';
-import EmployeeCard from './EmployeeCard';
 
-// --- Prop Interface ---
-interface KpiDashboardViewProps extends AppData {
-    addYear: (year: number) => void;
-    recordScore: (employeeId: number, kpiId: number, period: string, value: number | null) => void;
-    saveNote: (employeeId: number, period: string, note: string) => void;
-    deleteEmployee: (id: number) => void;
-    updateEmployee: (id: number, name: string, title: string, department: string, targetAcquisitionRate: number) => void;
-    addEmployee: (name: string, title: string, department: string) => void;
-    addKpiToEmployee: (employeeId: number, type: string, target?: number) => void;
-}
+import React, { useState, useMemo, useEffect } from 'react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
+import { Employee, KpiConfigs, Product, EmployeeAutoTarget } from '../types.ts';
+import { calculateFinalScore, calculateAutoTargets } from '../utils/calculations.ts';
+import { HIGH_PERFORMANCE_THRESHOLD, LOW_PERFORMANCE_THRESHOLD } from '../constants.ts';
+import EmployeeCard from './EmployeeCard.tsx';
+import { useAppContext } from '../contexts/AppContext.tsx';
+import Modal from './common/Modal.tsx';
 
 // --- Sub-components ---
 const StatCard: React.FC<{ title: string; value: string; icon: JSX.Element, colorClass: string }> = ({ title, value, icon, colorClass }) => (
@@ -29,7 +21,8 @@ const StatCard: React.FC<{ title: string; value: string; icon: JSX.Element, colo
     </div>
 );
 
-const AddEmployeeModal: React.FC<{ addEmployee: KpiDashboardViewProps['addEmployee'], employees: Employee[], closeModal: () => void }> = ({ addEmployee, employees, closeModal }) => {
+const AddEmployeeModal: React.FC<{ closeModal: () => void }> = ({ closeModal }) => {
+    const { appData, addEmployee } = useAppContext();
     const [name, setName] = useState('');
     const [title, setTitle] = useState('');
     const [department, setDepartment] = useState('');
@@ -39,7 +32,7 @@ const AddEmployeeModal: React.FC<{ addEmployee: KpiDashboardViewProps['addEmploy
         if (!name || !title || !department) {
             setError('لطفاً تمام فیلدها را پر کنید.'); return;
         }
-        if (employees.some(e => e.name.toLowerCase() === name.toLowerCase())) {
+        if (appData.employees.some(e => e.name.toLowerCase() === name.toLowerCase())) {
             setError(`کارمندی با نام "${name}" از قبل وجود دارد.`); return;
         }
         addEmployee(name, title, department);
@@ -47,25 +40,24 @@ const AddEmployeeModal: React.FC<{ addEmployee: KpiDashboardViewProps['addEmploy
     };
     
     return (
-         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={closeModal}>
-            <div className="w-11/12 md:max-w-md rounded-2xl shadow-2xl p-6 card" onClick={e => e.stopPropagation()}>
-                <h3 className="text-2xl font-bold mb-4">افزودن کارمند جدید</h3>
-                 <div className="space-y-3">
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="نام کارمند" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
-                    <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="عنوان شغلی" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
-                    <input type="text" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="دپارتمان" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
-                    {error && <p className="text-red-500 text-sm">{error}</p>}
-                    <div className="flex justify-end gap-3 pt-4">
-                        <button onClick={handleSubmit} className="text-white px-6 py-2 rounded-lg transition btn-primary">افزودن</button>
-                        <button onClick={closeModal} className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition">انصراف</button>
-                    </div>
+        <Modal isOpen={true} onClose={closeModal} size="md">
+            <h3 className="text-2xl font-bold mb-4">افزودن کارمند جدید</h3>
+             <div className="space-y-3">
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="نام کارمند" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
+                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="عنوان شغلی" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
+                <input type="text" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="دپارتمان" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
+                {error && <p className="text-red-500 text-sm">{error}</p>}
+                <div className="flex justify-end gap-3 pt-4">
+                    <button onClick={handleSubmit} className="text-white px-6 py-2 rounded-lg transition btn-primary">افزودن</button>
+                    <button onClick={closeModal} className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition">انصراف</button>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };
 
-const AssignKpiModal: React.FC<{ employees: Employee[]; kpiConfigs: KpiConfigs; addKpiToEmployee: KpiDashboardViewProps['addKpiToEmployee']; closeModal: () => void }> = ({ employees, kpiConfigs, addKpiToEmployee, closeModal }) => {
+const AssignKpiModal: React.FC<{ closeModal: () => void }> = ({ closeModal }) => {
+    const { appData: { employees, kpiConfigs }, addKpiToEmployee } = useAppContext();
     const [employeeId, setEmployeeId] = useState('');
     const [kpiType, setKpiType] = useState('');
     const [target, setTarget] = useState('');
@@ -83,29 +75,27 @@ const AssignKpiModal: React.FC<{ employees: Employee[]; kpiConfigs: KpiConfigs; 
     };
     
     return (
-         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={closeModal}>
-            <div className="w-11/12 md:max-w-md rounded-2xl shadow-2xl p-6 card" onClick={e => e.stopPropagation()}>
-                <h3 className="text-2xl font-bold mb-4">تعریف KPI برای کارمند</h3>
-                <div className="space-y-3">
-                    <select value={employeeId} onChange={e => setEmployeeId(e.target.value)} className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700">
-                        <option value="">-- انتخاب کارمند --</option>
-                        {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
-                    </select>
-                    <select value={kpiType} onChange={e => setKpiType(e.target.value)} className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700">
-                        <option value="">-- انتخاب نوع KPI --</option>
-                        {Object.entries(kpiConfigs).map(([key, config]) => <option key={key} value={key}>{config.name}</option>)}
-                    </select>
-                    {showTargetInput && (
-                        <input type="number" value={target} onChange={e => setTarget(e.target.value)} placeholder="مقدار هدف" min="0" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
-                    )}
-                    {error && <p className="text-red-500 text-sm">{error}</p>}
-                    <div className="flex justify-end gap-3 pt-4">
-                        <button onClick={handleSubmit} className="text-white px-6 py-2 rounded-lg transition btn-green">افزودن KPI</button>
-                        <button onClick={closeModal} className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition">انصراف</button>
-                    </div>
+        <Modal isOpen={true} onClose={closeModal} size="md">
+            <h3 className="text-2xl font-bold mb-4">تعریف KPI برای کارمند</h3>
+            <div className="space-y-3">
+                <select value={employeeId} onChange={e => setEmployeeId(e.target.value)} className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700">
+                    <option value="">-- انتخاب کارمند --</option>
+                    {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+                </select>
+                <select value={kpiType} onChange={e => setKpiType(e.target.value)} className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700">
+                    <option value="">-- انتخاب نوع KPI --</option>
+                    {Object.entries(kpiConfigs).map(([key, config]) => <option key={key} value={key}>{config.name}</option>)}
+                </select>
+                {showTargetInput && (
+                    <input type="number" value={target} onChange={e => setTarget(e.target.value)} placeholder="مقدار هدف" min="0" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
+                )}
+                {error && <p className="text-red-500 text-sm">{error}</p>}
+                <div className="flex justify-end gap-3 pt-4">
+                    <button onClick={handleSubmit} className="text-white px-6 py-2 rounded-lg transition btn-green">افزودن KPI</button>
+                    <button onClick={closeModal} className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition">انصراف</button>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };
 
@@ -188,8 +178,11 @@ const LiveMonitor: React.FC<{ employees: Employee[], products: Product[], kpiCon
 
 
 // --- Main Component ---
-const KpiDashboardView: React.FC<KpiDashboardViewProps> = (props) => {
-    const [year, setYear] = useState(props.availableYears[0]);
+const KpiDashboardView: React.FC = () => {
+    const { appData, addYear } = useAppContext();
+    const { employees, kpiConfigs, availableYears, provinces, medicalCenters, products, marketData } = appData;
+
+    const [year, setYear] = useState(availableYears[0]);
     const [season, setSeason] = useState<'بهار' | 'تابستان' | 'پاییز' | 'زمستان'>('بهار');
     const [month, setMonth] = useState('فروردین');
     const [searchTerm, setSearchTerm] = useState('');
@@ -201,10 +194,10 @@ const KpiDashboardView: React.FC<KpiDashboardViewProps> = (props) => {
     const monthsForSeason = {'بهار':['فروردین','اردیبهشت','خرداد'],'تابستان':['تیر','مرداد','شهریور'],'پاییز':['مهر','آبان','آذر'],'زمستان':['دی','بهمن','اسفند']};
 
     useEffect(() => {
-        if (!props.availableYears.includes(year) && props.availableYears.length > 0) {
-            setYear(props.availableYears[0]);
+        if (!availableYears.includes(year) && availableYears.length > 0) {
+            setYear(availableYears[0]);
         }
-    }, [props.availableYears, year]);
+    }, [availableYears, year]);
 
     const handleSeasonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newSeason = e.target.value as 'بهار' | 'تابستان' | 'پاییز' | 'زمستان';
@@ -216,35 +209,30 @@ const KpiDashboardView: React.FC<KpiDashboardViewProps> = (props) => {
         const newYearRaw = prompt('سال جدید (مثلا: 1405):');
         if (newYearRaw) {
             const newYear = parseInt(newYearRaw);
-            if (!isNaN(newYear) && newYearRaw.length === 4) { props.addYear(newYear); setYear(newYear); } 
+            if (!isNaN(newYear) && newYearRaw.length === 4) { addYear(newYear); setYear(newYear); } 
             else { alert("سال معتبر 4 رقمی وارد کنید."); }
         }
     };
     
     // Calculate all auto targets once for the current year
     const employeeAutoTargets = useMemo(() => {
-        const territories = [...props.provinces, ...props.medicalCenters];
-        // This calculation is annual, so we iterate through all products
-        const targetsByProduct = props.products.map(product => {
-            const totalMarketSize = props.marketData[product.id]?.[year] || 0;
-            return calculateAutoTargets(props.employees, territories, product, totalMarketSize);
+        const territories = [...provinces, ...medicalCenters];
+        const targetsByProduct = products.map(product => {
+            const totalMarketSize = marketData[product.id]?.[year] || 0;
+            return calculateAutoTargets(employees, territories, product, totalMarketSize);
         });
 
-        // We need to aggregate targets from all products for each employee
         const aggregatedTargets: { [empId: number]: EmployeeAutoTarget } = {};
 
         targetsByProduct.flat().forEach(target => {
             if (!aggregatedTargets[target.employeeId]) {
-                aggregatedTargets[target.employeeId] = JSON.parse(JSON.stringify(target)); // Deep copy
-                aggregatedTargets[target.employeeId].annual.value = 0; // Reset value
+                aggregatedTargets[target.employeeId] = JSON.parse(JSON.stringify(target));
+                aggregatedTargets[target.employeeId].annual.value = 0;
             }
-             // For simplicity, we just sum up the monetary value. A more complex logic could be needed for quantity
             aggregatedTargets[target.employeeId].annual.value += target.annual.value;
-            // Note: We are not aggregating quantities as they are product-specific. The card will show a summary value.
         });
         
-         // Also add employees who might not have targets calculated (e.g., no provinces)
-        props.employees.forEach(emp => {
+        employees.forEach(emp => {
             if (!aggregatedTargets[emp.id]) {
                 aggregatedTargets[emp.id] = {
                     employeeId: emp.id,
@@ -259,11 +247,11 @@ const KpiDashboardView: React.FC<KpiDashboardViewProps> = (props) => {
 
         return Object.values(aggregatedTargets);
 
-    }, [props.employees, props.provinces, props.medicalCenters, props.products, props.marketData, year]);
+    }, [employees, provinces, medicalCenters, products, marketData, year]);
 
 
     const { filteredAndSortedEmployees, teamStats } = useMemo(() => {
-        const scores = props.employees.map(emp => ({emp, score: calculateFinalScore(emp, period, props.kpiConfigs)}));
+        const scores = employees.map(emp => ({emp, score: calculateFinalScore(emp, period, kpiConfigs)}));
         const filtered = scores.filter(({emp}) => emp.name.toLowerCase().includes(searchTerm.toLowerCase()));
         
         filtered.sort((a, b) => {
@@ -287,7 +275,7 @@ const KpiDashboardView: React.FC<KpiDashboardViewProps> = (props) => {
                 low: allScores.filter(s => s < LOW_PERFORMANCE_THRESHOLD).length.toLocaleString('fa-IR'),
             },
         };
-    }, [props.employees, searchTerm, sort, period, props.kpiConfigs]);
+    }, [employees, searchTerm, sort, period, kpiConfigs]);
 
     return (
         <div className="fade-in">
@@ -302,13 +290,13 @@ const KpiDashboardView: React.FC<KpiDashboardViewProps> = (props) => {
                 <StatCard title="نیاز به بهبود" value={`${teamStats.low} نفر`} colorClass="bg-red-100 text-red-600" icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>} />
             </div>
             
-             <LiveMonitor employees={props.employees} products={props.products} kpiConfigs={props.kpiConfigs} period={period} employeeAutoTargets={employeeAutoTargets} />
+             <LiveMonitor employees={employees} products={products} kpiConfigs={kpiConfigs} period={period} employeeAutoTargets={employeeAutoTargets} />
 
              <div className="card border rounded-lg p-4 mb-6">
                  <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                     <div className="flex items-center gap-2 flex-wrap">
                         <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="p-2 border rounded-lg bg-gray-50 text-gray-700">
-                             {props.availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                             {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
                          <button onClick={handleAddYear} className="p-2 h-full bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition" title="افزودن سال جدید">+</button>
                         <select value={season} onChange={handleSeasonChange} className="p-2 border rounded-lg bg-gray-50 text-gray-700">
@@ -338,12 +326,12 @@ const KpiDashboardView: React.FC<KpiDashboardViewProps> = (props) => {
             <div className="space-y-6">
                 {filteredAndSortedEmployees.map(emp => {
                     const empAutoTarget = employeeAutoTargets.find(t => t.employeeId === emp.id);
-                    return <EmployeeCard key={emp.id} employee={emp} period={period} {...props} employeeAutoTarget={empAutoTarget}/>
+                    return <EmployeeCard key={emp.id} employee={emp} period={period} employeeAutoTarget={empAutoTarget}/>
                 })}
             </div>
             
-            {isAddEmployeeModalOpen && <AddEmployeeModal addEmployee={props.addEmployee} employees={props.employees} closeModal={() => setAddEmployeeModalOpen(false)} />}
-            {isAssignKpiModalOpen && <AssignKpiModal employees={props.employees} kpiConfigs={props.kpiConfigs} addKpiToEmployee={props.addKpiToEmployee} closeModal={() => setAssignKpiModalOpen(false)} />}
+            {isAddEmployeeModalOpen && <AddEmployeeModal closeModal={() => setAddEmployeeModalOpen(false)} />}
+            {isAssignKpiModalOpen && <AssignKpiModal closeModal={() => setAssignKpiModalOpen(false)} />}
         </div>
     );
 };

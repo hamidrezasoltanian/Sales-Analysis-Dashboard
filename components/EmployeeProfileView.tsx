@@ -1,7 +1,10 @@
+
 import React, { useState, useMemo } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { AppData, Employee } from '../types';
-import { calculateFinalScore } from '../utils/calculations';
+import { AppData, Employee } from '../types.ts';
+import { calculateFinalScore } from '../utils/calculations.ts';
+import { useAppContext } from '../contexts/AppContext.tsx';
+import EmptyState from './common/EmptyState.tsx';
 
 const PerformanceTrendChart: React.FC<{ employee: Employee, kpiConfigs: AppData['kpiConfigs'] }> = ({ employee, kpiConfigs }) => {
     const trendData = useMemo(() => {
@@ -44,19 +47,21 @@ const PerformanceTrendChart: React.FC<{ employee: Employee, kpiConfigs: AppData[
     );
 };
 
-const EmployeeProfileView: React.FC<AppData> = (props) => {
-    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(props.employees[0]?.id.toString() || '');
+const EmployeeProfileView: React.FC = () => {
+    const { appData } = useAppContext();
+    const { employees, provinces, medicalCenters, kpiConfigs } = appData;
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employees[0]?.id.toString() || '');
 
     const selectedEmployee = useMemo(() => {
-        return props.employees.find(emp => emp.id.toString() === selectedEmployeeId);
-    }, [selectedEmployeeId, props.employees]);
+        return employees.find(emp => emp.id.toString() === selectedEmployeeId);
+    }, [selectedEmployeeId, employees]);
 
     const assignedTerritories = useMemo(() => {
         if (!selectedEmployee) return [];
-        const provinces = props.provinces.filter(p => p.assignedTo === selectedEmployee.id);
-        const medicalCenters = props.medicalCenters.filter(mc => mc.assignedTo === selectedEmployee.id);
-        return [...provinces, ...medicalCenters];
-    }, [selectedEmployee, props.provinces, props.medicalCenters]);
+        const assignedProvinces = provinces.filter(p => p.assignedTo === selectedEmployee.id);
+        const assignedMedicalCenters = medicalCenters.filter(mc => mc.assignedTo === selectedEmployee.id);
+        return [...assignedProvinces, ...assignedMedicalCenters];
+    }, [selectedEmployee, provinces, medicalCenters]);
     
     return (
         <div className="fade-in">
@@ -74,7 +79,7 @@ const EmployeeProfileView: React.FC<AppData> = (props) => {
                     className="w-full md:w-1/3 p-2 border rounded-lg bg-gray-50 text-gray-700"
                 >
                     <option value="">-- یک کارمند را انتخاب کنید --</option>
-                    {props.employees.map(emp => (
+                    {employees.map(emp => (
                         <option key={emp.id} value={emp.id}>{emp.name}</option>
                     ))}
                 </select>
@@ -102,7 +107,7 @@ const EmployeeProfileView: React.FC<AppData> = (props) => {
                     <div className="lg:col-span-2 flex flex-col gap-6">
                          <div className="card border rounded-lg p-4">
                             <h3 className="text-xl font-semibold border-b pb-2 mb-3">روند عملکرد (KPI)</h3>
-                            <PerformanceTrendChart employee={selectedEmployee} kpiConfigs={props.kpiConfigs} />
+                            <PerformanceTrendChart employee={selectedEmployee} kpiConfigs={kpiConfigs} />
                         </div>
                         <div className="card border rounded-lg p-4">
                             <h3 className="text-xl font-semibold border-b pb-2 mb-3">یادداشت‌های دوره‌ای</h3>
@@ -118,9 +123,7 @@ const EmployeeProfileView: React.FC<AppData> = (props) => {
                     </div>
                 </div>
             ) : (
-                <div className="card border rounded-lg p-8 text-center text-secondary">
-                    <p>لطفا برای مشاهده اطلاعات، یک کارمند را از لیست بالا انتخاب کنید.</p>
-                </div>
+                <EmptyState message="لطفا برای مشاهده اطلاعات، یک کارمند را از لیست بالا انتخاب کنید." />
             )}
         </div>
     );

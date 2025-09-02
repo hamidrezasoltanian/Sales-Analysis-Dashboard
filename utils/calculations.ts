@@ -1,4 +1,5 @@
-import { Employee, Kpi, KpiConfigs, SalesConfig, SalesPlannerState, SalesMetrics, SalesTargets, Product, Province, EmployeeAutoTarget, AnnualTarget, MonthlyTarget, MedicalCenter } from '../types';
+
+import { Employee, Kpi, KpiConfigs, SalesConfig, SalesPlannerState, SalesMetrics, SalesTargets, Product, Province, EmployeeAutoTarget, AnnualTarget, MonthlyTarget, MedicalCenter } from '../types.ts';
 
 // --- Period Utilities ---
 const PERSIAN_MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];

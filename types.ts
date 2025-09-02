@@ -136,7 +136,7 @@ export interface SettingsViewProps extends AppData {
     theme: Theme;
     setTheme: (theme: Theme) => void;
     updateSalesConfig: (newConfig: Partial<AppData['salesConfig']>) => void;
-    setBackgroundImage: (imageData: string | null) => void;
+    setBackgroundImage: (imageFile: File | null) => void;
 }
 
 

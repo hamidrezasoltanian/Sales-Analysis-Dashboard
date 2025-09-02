@@ -1,5 +1,6 @@
-import { AppData, Employee, KpiConfigs, EmployeeAutoTarget } from '../types';
-import { calculateFinalScore, calculateKpiScore } from './calculations';
+
+import { AppData, Employee, KpiConfigs, EmployeeAutoTarget } from '../types.ts';
+import { calculateFinalScore, calculateKpiScore } from './calculations.ts';
 
 export const downloadBackup = (data: AppData) => {
     const dataStr = JSON.stringify(data, null, 2);

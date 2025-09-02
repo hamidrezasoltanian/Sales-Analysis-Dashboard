@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { SalesConfig, SalesPlannerState } from '../types';
-import { calculateSalesMetrics } from '../utils/calculations';
+import { SalesConfig, SalesPlannerState } from '../types.ts';
+import { calculateSalesMetrics } from '../utils/calculations.ts';
 
 interface SalesPlannerViewProps {
     salesConfig: SalesConfig;

@@ -1,15 +1,12 @@
+
 import React, { useState } from 'react';
-import { AppData } from '../types';
-import AutoTargetingView from './AutoTargetingView';
-import SalesTargetingView from './SalesTargetingView';
+import { useAppContext } from '../contexts/AppContext.tsx';
+import AutoTargetingView from './AutoTargetingView.tsx';
+import SalesTargetingView from './SalesTargetingView.tsx';
 
-interface SalesTargetingPageProps extends AppData {
-    updateMarketData: (productId: string, year: number, size: number) => void;
-    saveSalesTargetData: (employeeId: number, period: string, productId: number, type: 'target' | 'actual', value: number | null) => void;
-}
-
-const SalesTargetingPage: React.FC<SalesTargetingPageProps> = (props) => {
+const SalesTargetingPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'auto' | 'manual'>('auto');
+    const { appData, updateMarketData, saveSalesTargetData } = useAppContext();
 
     return (
         <div className="fade-in">
@@ -25,22 +22,22 @@ const SalesTargetingPage: React.FC<SalesTargetingPageProps> = (props) => {
 
                 {activeTab === 'auto' && (
                     <AutoTargetingView 
-                        employees={props.employees}
-                        products={props.products}
-                        provinces={props.provinces}
-                        medicalCenters={props.medicalCenters}
-                        marketData={props.marketData}
-                        updateMarketData={props.updateMarketData}
-                        availableYears={props.availableYears}
+                        employees={appData.employees}
+                        products={appData.products}
+                        provinces={appData.provinces}
+                        medicalCenters={appData.medicalCenters}
+                        marketData={appData.marketData}
+                        updateMarketData={updateMarketData}
+                        availableYears={appData.availableYears}
                     />
                 )}
                 {activeTab === 'manual' && (
                     <SalesTargetingView 
-                        employees={props.employees}
-                        products={props.products}
-                        salesTargets={props.salesTargets}
-                        saveSalesTargetData={props.saveSalesTargetData}
-                        availableYears={props.availableYears}
+                        employees={appData.employees}
+                        products={appData.products}
+                        salesTargets={appData.salesTargets}
+                        saveSalesTargetData={saveSalesTargetData}
+                        availableYears={appData.availableYears}
                     />
                 )}
             </div>

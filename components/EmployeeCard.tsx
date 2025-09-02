@@ -1,48 +1,24 @@
-import React, { useState, useMemo } from 'react';
-import { Employee, KpiConfigs, Province, EmployeeAutoTarget, MedicalCenter } from '../types';
-import { calculateFinalScore, calculateKpiScore } from '../utils/calculations';
-import { HIGH_PERFORMANCE_THRESHOLD, LOW_PERFORMANCE_THRESHOLD } from '../constants';
-import TrendModal from './modals/TrendModal';
-import { printEmployeeReport, printEmployeeTargets } from '../utils/dataHandlers';
-import EmployeeTargetDetailModal from './modals/EmployeeTargetDetailModal';
+
+import React, { useState, useMemo, memo } from 'react';
+import { Employee, KpiConfigs, Province, EmployeeAutoTarget, MedicalCenter } from '../types.ts';
+import { calculateFinalScore, calculateKpiScore } from '../utils/calculations.ts';
+import { HIGH_PERFORMANCE_THRESHOLD, LOW_PERFORMANCE_THRESHOLD } from '../constants.ts';
+import TrendModal from './modals/TrendModal.tsx';
+import { printEmployeeReport, printEmployeeTargets } from '../utils/dataHandlers.ts';
+import EmployeeTargetDetailModal from './modals/EmployeeTargetDetailModal.tsx';
+import { useAppContext } from '../contexts/AppContext.tsx';
+import Modal from './common/Modal.tsx';
+import KpiTabContent from './employeeCard/KpiTabContent.tsx';
+import SalesTargetTabContent from './employeeCard/SalesTargetTabContent.tsx';
 
 interface EmployeeCardProps {
     employee: Employee;
     period: string;
-    kpiConfigs: KpiConfigs;
-    provinces: Province[];
-    medicalCenters: MedicalCenter[];
     employeeAutoTarget?: EmployeeAutoTarget;
-    recordScore: (employeeId: number, kpiId: number, period: string, value: number | null) => void;
-    saveNote: (employeeId: number, period: string, note: string) => void;
-    deleteEmployee: (id: number) => void;
-    updateEmployee: (id: number, name: string, title: string, department: string, targetAcquisitionRate: number) => void;
 }
 
-const KpiItem: React.FC<{ kpi: Employee['kpis'][0], employeeId: number, period: string, config: KpiConfigs[string], kpiScore: number, recordScore: EmployeeCardProps['recordScore'] }> = ({ kpi, employeeId, period, config, kpiScore, recordScore }) => {
-    const actualValue = kpi.scores[period] ?? '';
-
-    const handleScoreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        recordScore(employeeId, kpi.id, period, value === '' ? null : parseFloat(value));
-    };
-
-    return (
-        <div className="grid grid-cols-12 gap-2 items-center text-sm py-2 border-b last:border-b-0" style={{ borderColor: 'var(--border-color)' }}>
-            <div className="col-span-5 truncate font-medium" title={config.name}>
-                {config.name} {kpi.target ? `(هدف: ${kpi.target.toLocaleString('fa-IR')})` : ''}
-            </div>
-            <div className="col-span-4">
-                <input type="number" value={actualValue} onChange={handleScoreChange} placeholder="مقدار واقعی" className="w-full p-1 border rounded-md text-center bg-gray-50 text-gray-700" min="0" />
-            </div>
-            <div className={`col-span-3 text-center font-semibold ${kpiScore < 0 ? 'text-red-500' : ''}`}>
-                {kpiScore.toFixed(1)} / {Math.abs(config.maxPoints)}
-            </div>
-        </div>
-    );
-};
-
-const EditEmployeeModal: React.FC<{ employee: Employee; provinces: Province[]; medicalCenters: MedicalCenter[]; updateEmployee: EmployeeCardProps['updateEmployee']; closeModal: () => void; }> = ({ employee, provinces, medicalCenters, updateEmployee, closeModal }) => {
+const EditEmployeeModal: React.FC<{ employee: Employee; closeModal: () => void; }> = ({ employee, closeModal }) => {
+    const { appData: { provinces, medicalCenters }, updateEmployee } = useAppContext();
     const [name, setName] = useState(employee.name);
     const [title, setTitle] = useState(employee.title);
     const [department, setDepartment] = useState(employee.department);
@@ -62,67 +38,48 @@ const EditEmployeeModal: React.FC<{ employee: Employee; provinces: Province[]; m
     };
     
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={closeModal}>
-            <div className="w-11/12 md:max-w-md rounded-2xl shadow-2xl p-6 card" onClick={e => e.stopPropagation()}>
-                <h3 className="text-2xl font-bold mb-4">ویرایش اطلاعات کارمند</h3>
-                <div className="space-y-4">
-                    <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="نام" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
-                    <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="عنوان شغلی" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
-                    <input type="text" value={department} onChange={e => setDepartment(e.target.value)} placeholder="دپارتمان" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
-                     <div>
-                        <label className="block text-sm font-medium mb-1">درصد سهم بازار هدف فرد (%)</label>
-                        <input
-                            type="number"
-                            value={targetAcquisitionRate}
-                            onChange={e => setTargetAcquisitionRate(parseFloat(e.target.value) || 0)}
-                            className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700"
-                            min="0"
-                            max="100"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">مناطق تخصیص‌یافته</label>
-                        <div className="w-full p-2 border rounded-lg bg-gray-100 text-gray-600 min-h-[40px]">
-                           {assignedTerritories || <span className="text-gray-400">هیچ منطقه‌ای تخصیص داده نشده.</span>}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">برای تغییر تخصیص‌ها به تب "مدیریت" یا "مدیریت تهران" مراجعه کنید.</p>
-                    </div>
+        <Modal isOpen={true} onClose={closeModal} size="md">
+            <h3 className="text-2xl font-bold mb-4">ویرایش اطلاعات کارمند</h3>
+            <div className="space-y-4">
+                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="نام" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
+                <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="عنوان شغلی" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
+                <input type="text" value={department} onChange={e => setDepartment(e.target.value)} placeholder="دپارتمان" className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
+                 <div>
+                    <label className="block text-sm font-medium mb-1">درصد سهم بازار هدف فرد (%)</label>
+                    <input
+                        type="number"
+                        value={targetAcquisitionRate}
+                        onChange={e => setTargetAcquisitionRate(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700"
+                        min="0"
+                        max="100"
+                    />
                 </div>
-                <div className="flex justify-end gap-3 mt-6">
-                    <button onClick={handleSave} className="text-white px-6 py-2 rounded-lg transition btn-primary">ذخیره</button>
-                    <button onClick={closeModal} className="bg-gray-300 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-400 transition">انصراف</button>
+                <div>
+                    <label className="block text-sm font-medium mb-1">مناطق تخصیص‌یافته</label>
+                    <div className="w-full p-2 border rounded-lg bg-gray-100 text-gray-600 min-h-[40px]">
+                       {assignedTerritories || <span className="text-gray-400">هیچ منطقه‌ای تخصیص داده نشده.</span>}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">برای تغییر تخصیص‌ها به تب "مدیریت" یا "مدیریت تهران" مراجعه کنید.</p>
                 </div>
             </div>
-        </div>
+            <div className="flex justify-end gap-3 mt-6">
+                <button onClick={handleSave} className="text-white px-6 py-2 rounded-lg transition btn-primary">ذخیره</button>
+                <button onClick={closeModal} className="bg-gray-300 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-400 transition">انصراف</button>
+            </div>
+        </Modal>
     );
 };
 
 
-const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, kpiConfigs, provinces, medicalCenters, employeeAutoTarget, recordScore, saveNote, deleteEmployee, updateEmployee }) => {
-    const finalScore = calculateFinalScore(employee, period, kpiConfigs);
-    const scoreColorClass = finalScore >= HIGH_PERFORMANCE_THRESHOLD ? 'bg-green-500' : finalScore >= LOW_PERFORMANCE_THRESHOLD ? 'bg-yellow-500' : 'bg-red-500';
+const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, employeeAutoTarget }) => {
+    const { appData: { kpiConfigs, provinces, medicalCenters }, deleteEmployee } = useAppContext();
+    const finalScore = useMemo(() => calculateFinalScore(employee, period, kpiConfigs), [employee, period, kpiConfigs]);
+    
     const [isTrendModalOpen, setTrendModalOpen] = useState(false);
     const [isEditModalOpen, setEditModalOpen] = useState(false);
-    const [isTargetDetailModalOpen, setTargetDetailModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'kpi' | 'targets'>('kpi');
 
-    const assignedTerritories = useMemo(() => {
-        const assignedProvinces = provinces.filter(p => p.assignedTo === employee.id);
-        const assignedCenters = medicalCenters.filter(c => c.assignedTo === employee.id);
-        return [...assignedProvinces, ...assignedCenters];
-    }, [provinces, medicalCenters, employee.id]);
-
-    const handlePrintKpi = () => {
-        printEmployeeReport(employee, period, kpiConfigs);
-    };
-
-    const handlePrintTargets = () => {
-        if (employeeAutoTarget) {
-            const year = period.split(' ')[1];
-            printEmployeeTargets(employee, employeeAutoTarget, year);
-        }
-    };
-    
     return (
         <div className="card p-4 rounded-xl border">
             <div className="flex justify-between items-start mb-2">
@@ -149,78 +106,28 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, kpiConfig
             </div>
             
             {activeTab === 'kpi' && (
-                <>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
-                        <div className={`${scoreColorClass} h-2.5 rounded-full`} style={{ width: `${Math.min(finalScore, 100)}%` }}></div>
-                    </div>
-                    <div className="flex justify-center items-center gap-4 mb-4">
-                        <span className="font-bold">امتیاز نهایی: </span>
-                        <span className={`px-3 py-1 text-sm rounded-full ${scoreColorClass.replace('bg-', 'text-').replace('-500', '-800')} ${scoreColorClass.replace('-500', '-100')}`}>{Math.round(finalScore).toLocaleString('fa-IR')} / 100</span>
-                         <button onClick={handlePrintKpi} title="چاپ گزارش KPI" className="text-gray-600 hover:text-gray-900 transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                            </svg>
-                        </button>
-                    </div>
-                    <div className="space-y-2">
-                        {employee.kpis.length > 0 ? employee.kpis.map(kpi => {
-                            const config = kpiConfigs[kpi.type];
-                            if (!config) return null;
-                            const kpiScore = calculateKpiScore(kpi, period, employee.kpis, kpiConfigs);
-                            return <KpiItem key={kpi.id} kpi={kpi} employeeId={employee.id} period={period} config={config} kpiScore={kpiScore} recordScore={recordScore} />;
-                        }) : <p className="text-xs text-center py-2 text-secondary">هیچ KPI تعریف نشده است.</p>}
-                    </div>
-                    <div className="border-t mt-4 pt-3" style={{borderColor: 'var(--border-color)'}}>
-                        <label className="font-semibold text-sm text-secondary">یادداشت برای دوره {period}:</label>
-                        <textarea
-                            className="w-full p-2 mt-3 border rounded-lg bg-gray-100 text-gray-800 text-sm min-h-[60px] transition focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                            defaultValue={employee.notes?.[period] || ''}
-                            onBlur={(e) => saveNote(employee.id, period, e.target.value)}
-                            placeholder="توضیحات و بازخوردهای این دوره را اینجا بنویسید..."
-                        ></textarea>
-                    </div>
-                </>
+                <KpiTabContent 
+                    employee={employee} 
+                    period={period} 
+                    finalScore={finalScore} 
+                    kpiConfigs={kpiConfigs} 
+                />
             )}
 
             {activeTab === 'targets' && (
-                <div className="text-sm">
-                    <h4 className="font-bold mb-2">خلاصه اهداف فروش سال {period.split(' ')[1]}</h4>
-                    {employeeAutoTarget && employeeAutoTarget.annual.value > 0 ? (
-                        <div className="space-y-3">
-                            <div className="flex justify-between p-2 rounded-lg" style={{backgroundColor: 'var(--bg-color)'}}>
-                                <span>مجموع تارگت ریالی سالانه:</span>
-                                <span className="font-bold text-green-600">{employeeAutoTarget.annual.value.toLocaleString('fa-IR')} تومان</span>
-                            </div>
-                            <div>
-                                <h5 className="font-semibold mb-1">مناطق تحت پوشش:</h5>
-                                <div className="flex flex-wrap gap-2">
-                                    {assignedTerritories.length > 0 ? assignedTerritories.map(t => (
-                                        <span key={t.id} className="bg-gray-200 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full">{t.name}</span>
-                                    )) : <span className="text-secondary text-xs">هیچ منطقه‌ای تخصیص داده نشده.</span>}
-                                </div>
-                            </div>
-                            <div className="flex justify-center items-center gap-4 pt-2">
-                                <button onClick={() => setTargetDetailModalOpen(true)} className="text-blue-600 hover:underline">
-                                    مشاهده جزئیات کامل اهداف
-                                </button>
-                                <button onClick={handlePrintTargets} title="چاپ گزارش اهداف" className="text-gray-600 hover:text-gray-900 transition" disabled={!employeeAutoTarget}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                         <p className="text-center py-6 text-secondary">هیچ هدف فروشی برای این کارمند در سال جاری محاسبه نشده است.</p>
-                    )}
-                </div>
+                <SalesTargetTabContent
+                    employee={employee}
+                    period={period}
+                    employeeAutoTarget={employeeAutoTarget}
+                    provinces={provinces}
+                    medicalCenters={medicalCenters}
+                />
             )}
 
             {isTrendModalOpen && <TrendModal employee={employee} kpiConfigs={kpiConfigs} closeModal={() => setTrendModalOpen(false)} />}
-            {isEditModalOpen && <EditEmployeeModal employee={employee} provinces={provinces} medicalCenters={medicalCenters} updateEmployee={updateEmployee} closeModal={() => setEditModalOpen(false)} />}
-            {isTargetDetailModalOpen && employeeAutoTarget && <EmployeeTargetDetailModal targetData={employeeAutoTarget} closeModal={() => setTargetDetailModalOpen(false)} />}
+            {isEditModalOpen && <EditEmployeeModal employee={employee} closeModal={() => setEditModalOpen(false)} />}
         </div>
     );
 };
 
-export default EmployeeCard;
+export default memo(EmployeeCard);

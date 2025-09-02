@@ -1,6 +1,7 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
-import { Employee, Product, Province, MarketData, EmployeeAutoTarget, SeasonalTarget, MonthlyTarget, MedicalCenter, TerritoryTargetDetail } from '../types';
-import { calculateAutoTargets } from '../utils/calculations';
+import { Employee, Product, Province, MarketData, EmployeeAutoTarget, SeasonalTarget, MonthlyTarget, MedicalCenter, TerritoryTargetDetail } from '../types.ts';
+import { calculateAutoTargets } from '../utils/calculations.ts';
 
 interface AutoTargetingViewProps {
     employees: Employee[];

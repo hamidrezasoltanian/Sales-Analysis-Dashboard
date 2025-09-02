@@ -1,16 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
-import { SettingsViewProps, KpiConfigs, SalesConfig } from '../types';
-import SalesPlannerView from './SalesPlannerView';
-import { downloadBackup, exportToCsv } from '../utils/dataHandlers';
-import ThemeSelector from './ThemeSelector';
+import { Theme, SettingsViewProps, KpiConfigs, SalesConfig, AppData } from '../types.ts';
+import SalesPlannerView from './SalesPlannerView.tsx';
+import { downloadBackup, exportToCsv } from '../utils/dataHandlers.ts';
+import ThemeSelector from './ThemeSelector.tsx';
+import { useAppContext } from '../contexts/AppContext.tsx';
+import { useNotification } from '../contexts/NotificationContext.tsx';
 
 // --- Sub-components for SettingsView ---
 
-const KpiConfigManager: React.FC<{
-    kpiConfigs: KpiConfigs;
-    saveKpiConfig: SettingsViewProps['saveKpiConfig'];
-    deleteKpiConfig: SettingsViewProps['deleteKpiConfig'];
-}> = ({ kpiConfigs, saveKpiConfig, deleteKpiConfig }) => {
+const KpiConfigManager: React.FC = () => {
+    const { appData: { kpiConfigs }, saveKpiConfig, deleteKpiConfig } = useAppContext();
     const [editingKpi, setEditingKpi] = useState<KpiConfigs[string] & { id: string } | null>(null);
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -61,7 +61,9 @@ const KpiConfigManager: React.FC<{
     );
 };
 
-const DataManager: React.FC<{ fullData: SettingsViewProps; restoreData: SettingsViewProps['restoreData'] }> = ({ fullData, restoreData }) => {
+const DataManager: React.FC = () => {
+    const { appData, restoreData } = useAppContext();
+    const { showNotification } = useNotification();
     const [isRestoring, setIsRestoring] = useState(false);
 
     const handleRestore = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,17 +77,17 @@ const DataManager: React.FC<{ fullData: SettingsViewProps; restoreData: Settings
                 const result = e.target?.result as string;
                 const restored = JSON.parse(result);
                 if (restored.employees && restored.kpiConfigs) {
-                    restoreData(restored);
-                    alert('داده‌ها با موفقیت بازیابی شد.');
+                    restoreData(restored as AppData);
+                    showNotification('داده‌ها با موفقیت بازیابی شد.', 'success');
                 } else {
-                    alert('فرمت فایل پشتیبان معتبر نیست.');
+                    showNotification('فرمت فایل پشتیبان معتبر نیست.', 'error');
                 }
             } catch (err) {
                 console.error("Restore error:", err);
-                alert('خطا در خواندن فایل پشتیبان.');
+                showNotification('خطا در خواندن فایل پشتیبان.', 'error');
             } finally {
                 setIsRestoring(false);
-                event.target.value = '';
+                if (event.target) event.target.value = '';
             }
         };
         reader.readAsText(file);
@@ -94,10 +96,10 @@ const DataManager: React.FC<{ fullData: SettingsViewProps; restoreData: Settings
     return (
         <div className="mt-4 space-y-4">
              <div className="space-y-2">
-                <button onClick={() => exportToCsv(fullData)} className="w-full max-w-sm bg-teal-600 text-white py-2 rounded-lg hover:bg-teal-700 transition-all shadow">خروجی CSV از کل داده‌ها</button>
+                <button onClick={() => exportToCsv(appData)} className="w-full max-w-sm bg-teal-600 text-white py-2 rounded-lg hover:bg-teal-700 transition-all shadow">خروجی CSV از کل داده‌ها</button>
             </div>
             <div className="flex gap-2 max-w-sm">
-                <button onClick={() => downloadBackup(fullData)} className="w-full bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-800 transition-all shadow">دانلود پشتیبان</button>
+                <button onClick={() => downloadBackup(appData)} className="w-full bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-800 transition-all shadow">دانلود پشتیبان</button>
                 <label htmlFor="restoreInput" className="w-full bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600 transition-all shadow flex items-center justify-center gap-2 cursor-pointer">
                     {isRestoring ? <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div> : <span>بازیابی داده</span>}
                 </label>
@@ -108,10 +110,9 @@ const DataManager: React.FC<{ fullData: SettingsViewProps; restoreData: Settings
 };
 
 
-const SalesConfigManager: React.FC<{
-    salesConfig: SalesConfig;
-    updateSalesConfig: (newConfig: Partial<SalesConfig>) => void;
-}> = ({ salesConfig, updateSalesConfig }) => {
+const SalesConfigManager: React.FC = () => {
+    const { appData: { salesConfig }, updateSalesConfig } = useAppContext();
+    const { showNotification } = useNotification();
     const [config, setConfig] = useState(salesConfig);
 
     useEffect(() => {
@@ -125,7 +126,7 @@ const SalesConfigManager: React.FC<{
 
     const handleSave = () => {
         updateSalesConfig(config);
-        alert('تنظیمات با موفقیت ذخیره شد.');
+        showNotification('تنظیمات با موفقیت ذخیره شد.', 'success');
     };
 
     const fields = [
@@ -169,19 +170,16 @@ const SalesConfigManager: React.FC<{
 const AppearanceManager: React.FC<{
     theme: SettingsViewProps['theme'];
     setTheme: SettingsViewProps['setTheme'];
-    backgroundImage: SettingsViewProps['backgroundImage'];
-    setBackgroundImage: SettingsViewProps['setBackgroundImage'];
-}> = ({ theme, setTheme, backgroundImage, setBackgroundImage }) => {
+}> = ({ theme, setTheme }) => {
+    const { appData: { backgroundImage }, setBackgroundImage } = useAppContext();
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setBackgroundImage(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            setBackgroundImage(file);
         }
+        // Clear input value to allow re-uploading the same file
+        e.target.value = '';
     };
     
     return (
@@ -202,6 +200,7 @@ const AppearanceManager: React.FC<{
                         </button>
                     )}
                 </div>
+                 <p className="text-xs text-secondary mt-2">تصاویر حجیم بدون مشکل آپلود می‌شوند.</p>
             </div>
         </div>
     );
@@ -209,8 +208,9 @@ const AppearanceManager: React.FC<{
 
 
 // --- Main Component ---
-const SettingsView: React.FC<SettingsViewProps> = (props) => {
+const SettingsView: React.FC<{ theme: Theme, setTheme: (theme: Theme) => void }> = ({ theme, setTheme }) => {
     const [activeTab, setActiveTab] = useState<'planner' | 'planner-config' | 'kpi' | 'data' | 'appearance'>('planner');
+    const { appData, updateSalesPlannerState } = useAppContext();
 
     return (
         <div className="fade-in">
@@ -229,36 +229,24 @@ const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
                 {activeTab === 'planner' && (
                     <SalesPlannerView 
-                        salesConfig={props.salesConfig} 
-                        salesPlannerState={props.salesPlannerState} 
-                        updateSalesPlannerState={props.updateSalesPlannerState}
+                        salesConfig={appData.salesConfig} 
+                        salesPlannerState={appData.salesPlannerState} 
+                        updateSalesPlannerState={updateSalesPlannerState}
                     />
                 )}
                 {activeTab === 'planner-config' && (
-                    <SalesConfigManager
-                        salesConfig={props.salesConfig}
-                        updateSalesConfig={props.updateSalesConfig}
-                    />
+                    <SalesConfigManager />
                 )}
                 {activeTab === 'kpi' && (
-                    <KpiConfigManager 
-                        kpiConfigs={props.kpiConfigs}
-                        saveKpiConfig={props.saveKpiConfig}
-                        deleteKpiConfig={props.deleteKpiConfig}
-                    />
+                    <KpiConfigManager />
                 )}
                  {activeTab === 'data' && (
-                    <DataManager 
-                        fullData={props}
-                        restoreData={props.restoreData}
-                    />
+                    <DataManager />
                 )}
                 {activeTab === 'appearance' && (
                     <AppearanceManager 
-                        theme={props.theme} 
-                        setTheme={props.setTheme} 
-                        backgroundImage={props.backgroundImage}
-                        setBackgroundImage={props.setBackgroundImage}
+                        theme={theme} 
+                        setTheme={setTheme} 
                     />
                 )}
             </div>

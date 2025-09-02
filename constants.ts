@@ -1,4 +1,4 @@
-import { AppData, Province } from './types';
+import { AppData, Province } from './types.ts';
 
 export const LOCAL_STORAGE_KEY = 'unifiedDashboardData_v3_react';
 export const HIGH_PERFORMANCE_THRESHOLD = 80;
