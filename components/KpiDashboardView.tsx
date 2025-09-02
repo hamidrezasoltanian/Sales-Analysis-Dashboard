@@ -41,11 +41,6 @@ const KpiDashboardView: React.FC = () => {
         }
     };
     
-    const employeeAutoTargets = useMemo(() => {
-        // Simplified calculation for dashboard view - full details are in AutoTargetingView
-        return [];
-    }, [employees, provinces, medicalCenters, products, marketData, year]);
-
 
     const { filteredAndSortedEmployees, teamStats, trendData } = useMemo(() => {
         const scores = employees.map(emp => ({emp, score: calculateFinalScore(emp, period, kpiConfigs)}));
@@ -105,9 +100,9 @@ const KpiDashboardView: React.FC = () => {
     return (
         <div className="animate-subtle-appear">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <StatCard title="میانگین امتیاز تیم" value={teamStats.average} colorClass="bg-blue-100 text-blue-600" trendData={trendData.average} icon={<svg xmlns="http://www.w.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} />
-                <StatCard title="عملکرد عالی" value={`${teamStats.high} نفر`} colorClass="bg-green-100 text-green-600" trendData={trendData.high} icon={<svg xmlns="http://www.w.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>} />
-                <StatCard title="نیاز به بهبود" value={`${teamStats.low} نفر`} colorClass="bg-red-100 text-red-600" trendData={trendData.low} icon={<svg xmlns="http://www.w.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>} />
+                <StatCard title="میانگین امتیاز تیم" value={teamStats.average} colorClass="bg-blue-100 text-blue-600" trendData={trendData.average} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} />
+                <StatCard title="عملکرد عالی" value={`${teamStats.high} نفر`} colorClass="bg-green-100 text-green-600" trendData={trendData.high} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>} />
+                <StatCard title="نیاز به بهبود" value={`${teamStats.low} نفر`} colorClass="bg-red-100 text-red-600" trendData={trendData.low} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>} />
             </div>
 
              <div className="card border rounded-lg p-4 mb-6">

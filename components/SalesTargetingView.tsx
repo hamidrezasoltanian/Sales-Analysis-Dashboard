@@ -35,25 +35,24 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
 
         return products.map(product => {
             let carryOver = 0;
-            let currentPeriod = period;
             
-            for(let i = 0; i < 12 * 3; i++) { 
-                 const prevPeriod = getPreviousPeriod(currentPeriod);
-                 const prevData = salesTargets[employeeId]?.[prevPeriod]?.[product.id];
-                 if (!prevData) break; 
-                 
-                 const prevTarget = prevData.target ?? 0;
-                 const prevActual = prevData.actual ?? 0;
-                 
-                 const prevDetails = salesTargets[employeeId]?.[getPreviousPeriod(prevPeriod)]?.[product.id];
-                 const prevPrevTarget = prevDetails?.target ?? 0;
-                 const prevPrevActual = prevDetails?.actual ?? 0;
-                 const prevCarryOver = Math.max(0, (prevPrevTarget) - (prevPrevActual)) 
-                 
-                 const prevTotalTarget = prevTarget + prevCarryOver;
+            // Calculate carry-over from the previous period (t-1).
+            const prevPeriod = getPreviousPeriod(period);
+            const prevData = salesTargets[employeeId]?.[prevPeriod]?.[product.id];
 
-                 carryOver = Math.max(0, prevTotalTarget - prevActual);
-                 break; 
+            if (prevData) {
+                // To calculate carry-over from t-1, we need total target and actual for t-1.
+                // Total target for t-1 = target(t-1) + carry-over(t-2).
+                // A simplified calculation for carry-over(t-2) is used here.
+                const prevPrevPeriod = getPreviousPeriod(prevPeriod);
+                const prevPrevData = salesTargets[employeeId]?.[prevPrevPeriod]?.[product.id];
+                
+                const carryOverIntoPrevPeriod = prevPrevData 
+                    ? Math.max(0, (prevPrevData.target ?? 0) - (prevPrevData.actual ?? 0))
+                    : 0;
+
+                const totalTargetForPrevPeriod = (prevData.target ?? 0) + carryOverIntoPrevPeriod;
+                carryOver = Math.max(0, totalTargetForPrevPeriod - (prevData.actual ?? 0));
             }
 
             const currentData = salesTargets[employeeId]?.[period]?.[product.id];
@@ -66,10 +65,10 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
 
             return {
                 ...product,
-                carryOver,
+                carryOver: Math.round(carryOver),
                 target,
                 actual,
-                totalTarget,
+                totalTarget: Math.round(totalTarget),
                 shortfall,
                 achievement
             };
