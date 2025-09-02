@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { produce } from 'immer';
-import { Employee, View, Theme, AppData, Product, Province, Kpi } from './types';
+import { Employee, View, Theme, AppData, Product, Province, Kpi, SalesConfig } from './types';
 import { LOCAL_STORAGE_KEY, INITIAL_APP_DATA } from './constants';
 import Sidebar from './components/Sidebar';
 import KpiDashboardView from './components/KpiDashboardView';
@@ -179,6 +179,12 @@ if (province) province.assignedTo = employeeId;
     };
     
     // --- App Settings & Data ---
+    const updateSalesConfig = (newConfig: Partial<SalesConfig>) => {
+        updateAppData(draft => {
+            draft.salesConfig = { ...draft.salesConfig, ...newConfig };
+        });
+    };
+    
     const saveKpiConfig = (id: string, name: string, maxPoints: number, formula: string) => {
         updateAppData(draft => {
             draft.kpiConfigs[id] = { name, maxPoints, formula };
@@ -215,7 +221,7 @@ if (province) province.assignedTo = employeeId;
             case View.Management:
                 return <ManagementView {...appData} saveProduct={saveProduct} deleteProduct={deleteProduct} saveProvinces={saveProvinces} updateProvinceAssignment={updateProvinceAssignment} />;
             case View.Settings:
-                return <SettingsView {...appData} updateSalesPlannerState={updateSalesPlannerState} saveKpiConfig={saveKpiConfig} deleteKpiConfig={deleteKpiConfig} restoreData={restoreData} theme={theme} setTheme={setTheme} />;
+                return <SettingsView {...appData} updateSalesPlannerState={updateSalesPlannerState} saveKpiConfig={saveKpiConfig} deleteKpiConfig={deleteKpiConfig} restoreData={restoreData} theme={theme} setTheme={setTheme} updateSalesConfig={updateSalesConfig} />;
             default:
                 return null;
         }

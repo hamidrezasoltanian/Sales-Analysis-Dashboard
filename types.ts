@@ -123,6 +123,7 @@ export interface SettingsViewProps extends AppData {
     restoreData: (data: AppData) => void;
     theme: Theme;
     setTheme: (theme: Theme) => void;
+    updateSalesConfig: (newConfig: Partial<AppData['salesConfig']>) => void;
 }
 
 

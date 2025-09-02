@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { AppData, KpiConfigs, Theme } from '../types';
+import React, { useState, useEffect } from 'react';
+import { SettingsViewProps, KpiConfigs, SalesConfig } from '../types';
 import SalesPlannerView from './SalesPlannerView';
 import { downloadBackup, exportToCsv } from '../utils/dataHandlers';
 import ThemeSelector from './ThemeSelector';
@@ -9,8 +9,8 @@ import ThemeSelector from './ThemeSelector';
 
 const KpiConfigManager: React.FC<{
     kpiConfigs: KpiConfigs;
-    saveKpiConfig: (id: string, name: string, maxPoints: number, formula: string) => void;
-    deleteKpiConfig: (id: string) => void;
+    saveKpiConfig: SettingsViewProps['saveKpiConfig'];
+    deleteKpiConfig: SettingsViewProps['deleteKpiConfig'];
 }> = ({ kpiConfigs, saveKpiConfig, deleteKpiConfig }) => {
     const [editingKpi, setEditingKpi] = useState<KpiConfigs[string] & { id: string } | null>(null);
 
@@ -62,7 +62,7 @@ const KpiConfigManager: React.FC<{
     );
 };
 
-const DataManager: React.FC<{ fullData: AppData; restoreData: (data: AppData) => void }> = ({ fullData, restoreData }) => {
+const DataManager: React.FC<{ fullData: SettingsViewProps; restoreData: SettingsViewProps['restoreData'] }> = ({ fullData, restoreData }) => {
     const [isRestoring, setIsRestoring] = useState(false);
 
     const handleRestore = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,18 +108,69 @@ const DataManager: React.FC<{ fullData: AppData; restoreData: (data: AppData) =>
     );
 };
 
-// --- Main Component ---
-interface SettingsViewProps extends AppData {
-    updateSalesPlannerState: (newState: Partial<AppData['salesPlannerState']>) => void;
-    saveKpiConfig: (id: string, name: string, maxPoints: number, formula: string) => void;
-    deleteKpiConfig: (id: string) => void;
-    restoreData: (data: AppData) => void;
-    theme: Theme;
-    setTheme: (theme: Theme) => void;
-}
 
+const SalesConfigManager: React.FC<{
+    salesConfig: SalesConfig;
+    updateSalesConfig: (newConfig: Partial<SalesConfig>) => void;
+}> = ({ salesConfig, updateSalesConfig }) => {
+    const [config, setConfig] = useState(salesConfig);
+
+    useEffect(() => {
+        setConfig(salesConfig);
+    }, [salesConfig]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setConfig(prev => ({ ...prev, [name]: parseFloat(value) || 0 }));
+    };
+
+    const handleSave = () => {
+        updateSalesConfig(config);
+        alert('تنظیمات با موفقیت ذخیره شد.');
+    };
+
+    const fields = [
+        { name: 'totalTimePerPerson', label: 'مجموع زمان هر نفر (دقیقه در ماه)' },
+        { name: 'existingClientTime', label: 'زمان مشتریان فعلی (دقیقه در ماه)' },
+        { name: 'leadToOppTime', label: 'زمان سرنخ به فرصت (دقیقه)' },
+        { name: 'oppToCustomerTime', label: 'زمان فرصت به مشتری (دقیقه)' },
+        { name: 'leadToOppRate', label: 'نرخ تبدیل سرنخ به فرصت (%)' },
+        { name: 'oppToCustomerRate', label: 'نرخ تبدیل فرصت به مشتری (%)' },
+        { name: 'commissionRate', label: 'نرخ کمیسیون (%)' },
+        { name: 'marketSize', label: 'اندازه کل بازار (مشتری)' },
+    ];
+
+    return (
+        <div className="mt-4 fade-in">
+            <h4 className="text-lg font-semibold mb-4">ویرایش پارامترهای محاسباتی برنامه‌ریز فروش</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {fields.map(field => (
+                    <div key={field.name}>
+                        <label htmlFor={field.name} className="block text-sm font-medium mb-1">{field.label}</label>
+                        <input
+                            id={field.name}
+                            type="number"
+                            name={field.name}
+                            value={config[field.name as keyof SalesConfig]}
+                            onChange={handleChange}
+                            className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700"
+                        />
+                    </div>
+                ))}
+            </div>
+            <div className="text-left mt-6">
+                <button onClick={handleSave} className="btn-primary text-white px-6 py-2 rounded-lg shadow transition hover:shadow-lg">
+                    ذخیره تنظیمات
+                </button>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Main Component ---
 const SettingsView: React.FC<SettingsViewProps> = (props) => {
-    const [activeTab, setActiveTab] = useState<'planner' | 'kpi' | 'data' | 'appearance'>('planner');
+    const [activeTab, setActiveTab] = useState<'planner' | 'planner-config' | 'kpi' | 'data' | 'appearance'>('planner');
 
     return (
         <div className="fade-in">
@@ -128,8 +179,9 @@ const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 <p className="mt-2 text-secondary">ابزارهای کمکی و تنظیمات پیشرفته سیستم</p>
             </header>
             <div className="card border rounded-lg p-6">
-                 <div className="flex items-center gap-2 border-b pb-4 mb-4" style={{borderColor: 'var(--border-color)'}}>
+                 <div className="flex items-center gap-2 border-b pb-4 mb-4 flex-wrap" style={{borderColor: 'var(--border-color)'}}>
                     <button onClick={() => setActiveTab('planner')} className={`tab-button-internal ${activeTab === 'planner' ? 'active' : ''}`}>برنامه‌ریز فروش</button>
+                    <button onClick={() => setActiveTab('planner-config')} className={`tab-button-internal ${activeTab === 'planner-config' ? 'active' : ''}`}>تنظیمات برنامه‌ریز</button>
                     <button onClick={() => setActiveTab('kpi')} className={`tab-button-internal ${activeTab === 'kpi' ? 'active' : ''}`}>مدیریت انواع KPI</button>
                     <button onClick={() => setActiveTab('data')} className={`tab-button-internal ${activeTab === 'data' ? 'active' : ''}`}>مدیریت داده‌ها</button>
                     <button onClick={() => setActiveTab('appearance')} className={`tab-button-internal ${activeTab === 'appearance' ? 'active' : ''}`}>ظاهر برنامه</button>
@@ -140,6 +192,12 @@ const SettingsView: React.FC<SettingsViewProps> = (props) => {
                         salesConfig={props.salesConfig} 
                         salesPlannerState={props.salesPlannerState} 
                         updateSalesPlannerState={props.updateSalesPlannerState}
+                    />
+                )}
+                {activeTab === 'planner-config' && (
+                    <SalesConfigManager
+                        salesConfig={props.salesConfig}
+                        updateSalesConfig={props.updateSalesConfig}
                     />
                 )}
                 {activeTab === 'kpi' && (
