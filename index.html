@@ -12,7 +12,7 @@
         body {
             font-family: 'Vazirmatn', sans-serif;
             transition: background-color 0.3s ease, color 0.3s ease;
-            overflow-x: hidden;
+            overflow: hidden; /* Changed from overflow-x: hidden */
         }
         :root, .theme-default {
             --bg-color: #f3f4f6;
@@ -83,12 +83,12 @@
         ::-webkit-scrollbar-thumb:hover { background: #555; }
 
         /* Animation for fade-in */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes subtle-appear {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        .fade-in {
-            animation: fadeIn 0.5s ease-out forwards;
+        .animate-subtle-appear {
+          animation: subtle-appear 0.5s ease-out forwards;
         }
 
         /* Background Image Styles */
@@ -113,12 +113,12 @@
         .with-background .sidebar-text { color: var(--sidebar-text); }
         
         /* Modal Animation */
-        @keyframes fade-scale-in {
-            from { transform: scale(0.95); opacity: 0; }
+        @keyframes pop-in {
+            from { transform: scale(0.9); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
-        .animate-fade-scale-in {
-            animation: fade-scale-in 0.2s ease-out forwards;
+        .animate-pop-in {
+            animation: pop-in 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
     </style>
 <script type="importmap">

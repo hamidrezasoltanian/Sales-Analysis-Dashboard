@@ -201,3 +201,25 @@ export interface EmployeeTargetDetailModalProps {
     targetData: EmployeeAutoTarget;
     closeModal: () => void;
 }
+
+// --- New UI Component Props ---
+export interface HeaderProps {
+    activeView: View;
+}
+
+export interface QuickAddModalProps {
+    closeModal: () => void;
+}
+
+export interface StatCardProps {
+    title: string;
+    value: string;
+    icon: JSX.Element;
+    colorClass: string;
+    trendData: number[];
+}
+
+export interface TooltipProps {
+  text: string;
+  children: React.ReactNode;
+}

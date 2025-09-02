@@ -36,6 +36,8 @@ const loadDataFromLocalStorage = (): AppData => {
 
 interface AppContextType {
     appData: AppData;
+    quickAddModalOpen: boolean | 'employee' | 'product' | 'medicalCenter';
+    setQuickAddModalOpen: (isOpen: boolean | 'employee' | 'product' | 'medicalCenter') => void;
     // Add specific handlers to avoid passing updateAppData everywhere, promoting better encapsulation
     addEmployee: (name: string, title: string, department: string) => void;
     updateEmployee: (id: number, name: string, title: string, department: string, targetAcquisitionRate: number) => void;
@@ -66,6 +68,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [appData, setAppData] = useState<AppData>(loadDataFromLocalStorage);
+    const [quickAddModalOpen, setQuickAddModalOpen] = useState<AppContextType['quickAddModalOpen']>(false);
 
     // Effect to load background image from IndexedDB on initial app load
     useEffect(() => {
@@ -154,10 +157,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAppData(validatedData);
         // After restoring, clear any existing background image from DB as well
         setBackgroundImage(null);
-    }, []);
+    }, [setBackgroundImage]);
 
     const value = {
         appData,
+        quickAddModalOpen, setQuickAddModalOpen,
         addEmployee, updateEmployee, deleteEmployee, addKpiToEmployee, recordScore, saveNote,
         saveProduct, deleteProduct, saveProvinces, updateProvinceAssignment, saveMedicalCenter,
         deleteMedicalCenter, saveMedicalCenters, updateMedicalCenterAssignment, updateMarketData,

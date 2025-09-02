@@ -5,6 +5,8 @@ import { AppProvider, useAppContext } from './contexts/AppContext.tsx';
 import { NotificationProvider } from './contexts/NotificationContext.tsx';
 import Sidebar from './components/Sidebar.tsx';
 import PageLoader from './components/common/PageLoader.tsx';
+import Header from './components/common/Header.tsx';
+import QuickAddModal from './components/modals/QuickAddModal.tsx';
 
 // Use static imports instead of lazy loading to fix module resolution error
 import KpiDashboardView from './components/KpiDashboardView.tsx';
@@ -15,7 +17,7 @@ import EmployeeProfileView from './components/EmployeeProfileView.tsx';
 import SettingsView from './components/SettingsView.tsx';
 
 const AppContent: React.FC = () => {
-    const { appData } = useAppContext();
+    const { appData, quickAddModalOpen, setQuickAddModalOpen } = useAppContext();
     const [activeView, setActiveView] = useState<View>(View.Dashboard);
     const [theme, setTheme] = useState<Theme>(Theme.Default);
 
@@ -28,6 +30,12 @@ const AppContent: React.FC = () => {
             document.body.style.backgroundImage = 'none';
             document.body.classList.remove('with-background');
         }
+        // Cleanup object URL on component unmount or when image changes
+        return () => {
+            if (appData.backgroundImage && appData.backgroundImage.startsWith('blob:')) {
+                URL.revokeObjectURL(appData.backgroundImage);
+            }
+        };
     }, [theme, appData.backgroundImage]);
     
     const renderActiveView = () => {
@@ -43,13 +51,17 @@ const AppContent: React.FC = () => {
     };
 
     return (
-        <div className="flex">
+        <div className="flex h-screen bg-gray-100" style={{ backgroundColor: 'var(--bg-color)'}}>
             <Sidebar activeView={activeView} setActiveView={setActiveView} />
-            <main className="flex-1 p-6 md:p-8 h-screen overflow-y-auto">
-                <Suspense fallback={<PageLoader />}>
-                    {renderActiveView()}
-                </Suspense>
-            </main>
+            <div className="flex-1 flex flex-col overflow-hidden">
+                 <Header activeView={activeView} />
+                 <main className="flex-1 p-6 md:p-8 overflow-y-auto">
+                    <Suspense fallback={<PageLoader />}>
+                        {renderActiveView()}
+                    </Suspense>
+                </main>
+            </div>
+             {quickAddModalOpen && <QuickAddModal closeModal={() => setQuickAddModalOpen(false)} />}
         </div>
     );
 };

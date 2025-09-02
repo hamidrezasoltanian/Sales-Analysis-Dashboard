@@ -48,7 +48,7 @@ const PerformanceTrendChart: React.FC<{ employee: Employee, kpiConfigs: AppData[
 };
 
 const EmployeeProfileView: React.FC = () => {
-    const { appData } = useAppContext();
+    const { appData, setQuickAddModalOpen } = useAppContext();
     const { employees, provinces, medicalCenters, kpiConfigs } = appData;
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employees[0]?.id.toString() || '');
 
@@ -64,12 +64,7 @@ const EmployeeProfileView: React.FC = () => {
     }, [selectedEmployee, provinces, medicalCenters]);
     
     return (
-        <div className="fade-in">
-            <header className="mb-6">
-                <h1 className="text-3xl md:text-4xl font-bold">بررسی جامع کارمندان</h1>
-                <p className="mt-2 text-secondary">نمای ۳۶۰ درجه از عملکرد، وظایف و تاریخچه هر کارمند</p>
-            </header>
-
+        <div className="animate-subtle-appear">
             <div className="card border rounded-lg p-4 mb-6">
                 <label htmlFor="employee-selector" className="block text-sm font-medium mb-2">انتخاب کارمند:</label>
                 <select 
@@ -123,7 +118,17 @@ const EmployeeProfileView: React.FC = () => {
                     </div>
                 </div>
             ) : (
-                <EmptyState message="لطفا برای مشاهده اطلاعات، یک کارمند را از لیست بالا انتخاب کنید." />
+                <EmptyState 
+                    message="لطفا برای مشاهده اطلاعات، یک کارمند را از لیست بالا انتخاب کنید." 
+                    actionButton={
+                        <button 
+                            onClick={() => setQuickAddModalOpen('employee')} 
+                            className="btn-primary text-white px-4 py-2 mt-4 rounded-lg shadow hover:shadow-lg transition"
+                        >
+                            افزودن کارمند جدید
+                        </button>
+                    }
+                />
             )}
         </div>
     );
