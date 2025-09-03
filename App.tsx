@@ -22,22 +22,33 @@ const AppContent: React.FC = () => {
     const [activeView, setActiveView] = useState<View>(View.Dashboard);
     const [theme, setTheme] = useState<Theme>(Theme.Default);
 
+    // Effect for handling theme changes
     useEffect(() => {
-        document.body.className = `theme-${theme}`;
-        if (appData.backgroundImage) {
-            document.body.style.backgroundImage = `url(${appData.backgroundImage})`;
+        // More robustly manage theme classes on the body element
+        document.body.classList.remove('theme-default', 'theme-gray', 'theme-blue');
+        document.body.classList.add(`theme-${theme}`);
+    }, [theme]);
+
+    // Effect for handling background image changes
+    useEffect(() => {
+        const currentImageUrl = appData.backgroundImage;
+
+        if (currentImageUrl) {
+            document.body.style.backgroundImage = `url(${currentImageUrl})`;
             document.body.classList.add('with-background');
         } else {
             document.body.style.backgroundImage = 'none';
             document.body.classList.remove('with-background');
         }
-        // Cleanup object URL on component unmount or when image changes
+
+        // Cleanup function to revoke the object URL when the component unmounts or the image changes.
+        // This is the correct place to handle this lifecycle event.
         return () => {
-            if (appData.backgroundImage && appData.backgroundImage.startsWith('blob:')) {
-                URL.revokeObjectURL(appData.backgroundImage);
+            if (currentImageUrl && currentImageUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(currentImageUrl);
             }
         };
-    }, [theme, appData.backgroundImage]);
+    }, [appData.backgroundImage]);
     
     const renderActiveView = () => {
         switch (activeView) {

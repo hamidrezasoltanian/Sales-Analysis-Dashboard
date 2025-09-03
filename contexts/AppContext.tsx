@@ -153,10 +153,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const updateSalesConfig = useCallback((newConfig: Partial<SalesConfig>) => updateAppData(d => { d.salesConfig = { ...d.salesConfig, ...newConfig }; }), [updateAppData]);
     
     const setBackgroundImage = useCallback(async (imageFile: File | null) => {
-        // Revoke old URL if it exists to prevent memory leaks
-        if (appData.backgroundImage) {
-            URL.revokeObjectURL(appData.backgroundImage);
-        }
+        // The responsibility of revoking the old blob URL is now handled
+        // by the useEffect cleanup in App.tsx, which is the correct lifecycle point.
 
         if (imageFile) {
             try {
@@ -174,7 +172,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 console.error("Failed to delete background image:", error);
             }
         }
-    }, [appData.backgroundImage, updateAppData]);
+    }, [updateAppData]);
 
     const saveKpiConfig = useCallback((id: string, name: string, maxPoints: number, formula: string) => updateAppData(d => { d.kpiConfigs[id] = { name, maxPoints, formula }; }), [updateAppData]);
     const deleteKpiConfig = useCallback((id: string) => updateAppData(d => { delete d.kpiConfigs[id]; d.employees.forEach(e => { e.kpis = e.kpis.filter(k => k.type !== id); }); }), [updateAppData]);
