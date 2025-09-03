@@ -5,10 +5,23 @@ import { printEmployeeTargets } from '../../utils/dataHandlers.ts';
 import { useAppContext } from '../../contexts/AppContext.tsx';
 import ProvinceDetailModal from '../modals/ProvinceDetailModal.tsx';
 
+interface AggregatedTarget {
+    totalQuantity: number;
+    totalValue: number;
+    productCount: number;
+    productNames: string[];
+    breakdown: {
+        productName: string;
+        quantity: number;
+        value: number;
+    }[];
+}
+
 interface SalesTargetTabContentProps {
     employee: Employee;
     period: string;
     employeeAutoTarget?: EmployeeAutoTarget;
+    aggregatedAnnualTarget?: AggregatedTarget;
     provinces: Province[];
     medicalCenters: MedicalCenter[];
     products: Product[];
@@ -18,7 +31,7 @@ interface SalesTargetTabContentProps {
 }
 
 const SalesTargetTabContent: React.FC<SalesTargetTabContentProps> = ({ 
-    employee, period, employeeAutoTarget, provinces, medicalCenters, products, marketData, tehranMarketData, cardSize = 'comfortable'
+    employee, period, employeeAutoTarget, aggregatedAnnualTarget, provinces, medicalCenters, products, marketData, tehranMarketData, cardSize = 'comfortable'
 }) => {
     const { appData: { employees } } = useAppContext();
     const [selectedTerritory, setSelectedTerritory] = useState<Province | MedicalCenter | null>(null);
@@ -44,7 +57,9 @@ const SalesTargetTabContent: React.FC<SalesTargetTabContentProps> = ({
     return (
         <div className={textSize}>
             <h4 className="font-bold mb-2">خلاصه اهداف فروش سال {analysisYear}</h4>
+            
             {employeeAutoTarget && employeeAutoTarget.annual.value > 0 ? (
+                // Single Product View
                 <div className="space-y-3">
                     <div className="flex justify-between p-2 rounded-lg" style={{backgroundColor: 'var(--bg-color)'}}>
                         <span>مجموع تارگت ریالی سالانه:</span>
@@ -68,6 +83,27 @@ const SalesTargetTabContent: React.FC<SalesTargetTabContentProps> = ({
                                 >
                                     {t.name}
                                 </button>
+                            )) : <span className="text-secondary text-xs">هیچ منطقه‌ای تخصیص داده نشده.</span>}
+                        </div>
+                    </div>
+                </div>
+            ) : aggregatedAnnualTarget && aggregatedAnnualTarget.totalValue > 0 ? (
+                // Multi-Product View
+                <div className="space-y-3">
+                    <div className="flex justify-between p-2 rounded-lg" style={{backgroundColor: 'var(--bg-color)'}}>
+                        <span>مجموع تارگت ریالی ({aggregatedAnnualTarget.productCount.toLocaleString('fa-IR')} محصول):</span>
+                        <span className="font-bold text-green-600">{aggregatedAnnualTarget.totalValue.toLocaleString('fa-IR')} تومان</span>
+                    </div>
+                    <div>
+                        <h5 className="font-semibold mb-1">مناطق تحت پوشش:</h5>
+                        <div className="flex flex-wrap gap-2">
+                            {assignedTerritories.length > 0 ? assignedTerritories.map(t => (
+                                <span 
+                                    key={t.id} 
+                                    className="bg-gray-200 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full"
+                                >
+                                    {t.name}
+                                </span>
                             )) : <span className="text-secondary text-xs">هیچ منطقه‌ای تخصیص داده نشده.</span>}
                         </div>
                     </div>

@@ -8,6 +8,19 @@ import { useAppContext } from '../contexts/AppContext.tsx';
 import StatCard from './StatCard.tsx';
 import MultiSelectDropdown from './common/MultiSelectDropdown.tsx';
 
+// Define a more detailed structure for aggregated targets
+interface AggregatedTarget {
+    totalQuantity: number;
+    totalValue: number;
+    productCount: number;
+    productNames: string[];
+    breakdown: {
+        productName: string;
+        quantity: number;
+        value: number;
+    }[];
+}
+
 const KpiDashboardView: React.FC = () => {
     const { appData, addYear, setQuickAddModalOpen, setCardSize } = useAppContext();
     const { employees, kpiConfigs, availableYears, provinces, medicalCenters, products, marketData, tehranMarketData, cardSize } = appData;
@@ -103,15 +116,15 @@ const KpiDashboardView: React.FC = () => {
 
         const selectedProducts = products.filter(p => selectedProductIds.includes(p.id.toString()));
 
-        const localAggregatedTargets = new Map<number, {
-            quantity: number; value: number; productCount: number; productNames: string[];
-        }>();
+        const localAggregatedTargets = new Map<number, AggregatedTarget>();
 
         employees.forEach(emp => {
             localAggregatedTargets.set(emp.id, {
-                quantity: 0, value: 0,
+                totalQuantity: 0,
+                totalValue: 0,
                 productCount: selectedProducts.length,
-                productNames: selectedProducts.map(p => p.name)
+                productNames: selectedProducts.map(p => p.name),
+                breakdown: [],
             });
         });
 
@@ -124,8 +137,13 @@ const KpiDashboardView: React.FC = () => {
             autoTargetsForProduct.forEach(target => {
                 const empId = target.employeeId;
                 const currentAgg = localAggregatedTargets.get(empId)!;
-                currentAgg.quantity += target.annual.quantity;
-                currentAgg.value += target.annual.value;
+                currentAgg.totalQuantity += target.annual.quantity;
+                currentAgg.totalValue += target.annual.value;
+                currentAgg.breakdown.push({
+                    productName: product.name,
+                    quantity: target.annual.quantity,
+                    value: target.annual.value,
+                });
             });
         });
         

@@ -10,6 +10,18 @@ import SalesTargetTabContent from './employeeCard/SalesTargetTabContent.tsx';
 import Tooltip from './common/Tooltip.tsx';
 import EmployeeTargetDetailModal from './modals/EmployeeTargetDetailModal.tsx';
 
+interface AggregatedTarget {
+    totalQuantity: number;
+    totalValue: number;
+    productCount: number;
+    productNames: string[];
+    breakdown: {
+        productName: string;
+        quantity: number;
+        value: number;
+    }[];
+}
+
 interface EmployeeCardProps {
     employee: Employee;
     period: string;
@@ -18,7 +30,7 @@ interface EmployeeCardProps {
     marketData?: MarketData;
     tehranMarketData?: MarketData;
     cardSize?: CardSize;
-    aggregatedAnnualTarget?: { quantity: number; value: number; productCount: number; productNames: string[] };
+    aggregatedAnnualTarget?: AggregatedTarget;
     employeeAutoTargetForModal?: EmployeeAutoTarget;
 }
 
@@ -107,19 +119,37 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnl
                  <h3 className={`${nameSize} font-bold`}>{employee.name}</h3>
                  <p className={`${titleSize} text-secondary`}>{employee.department} / {employee.title}</p>
                  
-                 {aggregatedAnnualTarget && aggregatedAnnualTarget.quantity > 0 && (
-                    <div className={`text-xs p-2 rounded-lg mt-2 w-full text-right`} style={{backgroundColor: 'var(--bg-color)'}}>
+                 {aggregatedAnnualTarget && aggregatedAnnualTarget.totalQuantity > 0 && (
+                     <div className={`text-xs p-2 rounded-lg mt-2 w-full text-right`} style={{backgroundColor: 'var(--bg-color)'}}>
                         <Tooltip text={aggregatedAnnualTarget.productNames.join('، ')}>
-                            <p className="font-semibold text-secondary cursor-default">
+                             <p className="font-semibold text-secondary cursor-default mb-1">
                                 {aggregatedAnnualTarget.productCount > 1 
-                                    ? `مجموع اهداف (${aggregatedAnnualTarget.productCount} محصول):`
+                                    ? `اهداف سالانه (${aggregatedAnnualTarget.productCount.toLocaleString('fa-IR')} محصول):`
                                     : `هدف سالانه (${aggregatedAnnualTarget.productNames[0] || ''}):`
                                 }
                             </p>
                         </Tooltip>
-                        <div className="flex justify-between items-center mt-1">
-                           <span className="font-bold">{aggregatedAnnualTarget.quantity.toLocaleString('fa-IR')} عدد</span>
-                           <span className="font-bold text-green-600">{aggregatedAnnualTarget.value.toLocaleString('fa-IR')} تومان</span>
+                        
+                        {aggregatedAnnualTarget.productCount > 1 && (
+                            <div className="space-y-1 border-b pb-1 mb-1" style={{borderColor: 'var(--border-color)'}}>
+                                {aggregatedAnnualTarget.breakdown.map(item => (
+                                    <div key={item.productName} className="flex justify-between items-center text-[11px]">
+                                        <span className="text-secondary truncate pr-1">{item.productName}:</span>
+                                        <div className="flex gap-2 font-semibold flex-shrink-0">
+                                           <span>{item.quantity.toLocaleString('fa-IR')}</span>
+                                           <span className="text-green-600">{item.value.toLocaleString('fa-IR')} ت</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="flex justify-between items-center mt-1 font-bold">
+                           <span className="text-secondary">{aggregatedAnnualTarget.productCount > 1 ? 'مجموع:' : ''}</span>
+                           <div className="flex gap-3">
+                             <span>{aggregatedAnnualTarget.totalQuantity.toLocaleString('fa-IR')} عدد</span>
+                             <span className="text-green-600">{aggregatedAnnualTarget.totalValue.toLocaleString('fa-IR')} ت</span>
+                           </div>
                         </div>
                     </div>
                 )}
@@ -171,6 +201,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnl
                         provinces={provinces}
                         medicalCenters={medicalCenters}
                         employeeAutoTarget={employeeAutoTargetForModal}
+                        aggregatedAnnualTarget={aggregatedAnnualTarget}
                         products={products}
                         marketData={marketData}
                         tehranMarketData={tehranMarketData}

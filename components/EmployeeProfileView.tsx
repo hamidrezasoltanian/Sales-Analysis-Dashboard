@@ -7,6 +7,19 @@ import EmployeeCard from './EmployeeCard.tsx';
 import { calculateAutoTargets } from '../utils/calculations.ts';
 import MultiSelectDropdown from './common/MultiSelectDropdown.tsx';
 
+// Define a more detailed structure for aggregated targets
+interface AggregatedTarget {
+    totalQuantity: number;
+    totalValue: number;
+    productCount: number;
+    productNames: string[];
+    breakdown: {
+        productName: string;
+        quantity: number;
+        value: number;
+    }[];
+}
+
 const EmployeeProfileView: React.FC = () => {
     const { appData, setQuickAddModalOpen, addYear } = useAppContext();
     const { employees, availableYears, products, marketData, tehranMarketData, provinces, medicalCenters, cardSize } = appData;
@@ -63,10 +76,12 @@ const EmployeeProfileView: React.FC = () => {
 
         const selectedProducts = products.filter(p => selectedProductIds.includes(p.id.toString()));
 
-        const localAggregatedTarget = {
-            quantity: 0, value: 0,
+        const localAggregatedTarget: AggregatedTarget = {
+            totalQuantity: 0,
+            totalValue: 0,
             productCount: selectedProducts.length,
-            productNames: selectedProducts.map(p => p.name)
+            productNames: selectedProducts.map(p => p.name),
+            breakdown: [],
         };
 
         selectedProducts.forEach(product => {
@@ -76,8 +91,14 @@ const EmployeeProfileView: React.FC = () => {
             const autoTargetsForProduct = calculateAutoTargets([employee], provinces, medicalCenters, product, nationalMarketSize, tehranMarketSize);
 
             if (autoTargetsForProduct.length > 0) {
-                localAggregatedTarget.quantity += autoTargetsForProduct[0].annual.quantity;
-                localAggregatedTarget.value += autoTargetsForProduct[0].annual.value;
+                const target = autoTargetsForProduct[0];
+                localAggregatedTarget.totalQuantity += target.annual.quantity;
+                localAggregatedTarget.totalValue += target.annual.value;
+                localAggregatedTarget.breakdown.push({
+                    productName: product.name,
+                    quantity: target.annual.quantity,
+                    value: target.annual.value,
+                });
             }
         });
         
