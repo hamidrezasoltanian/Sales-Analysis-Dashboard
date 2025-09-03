@@ -6,7 +6,7 @@ import { printEmployeeReport } from '../../utils/dataHandlers.ts';
 import { useAppContext } from '../../contexts/AppContext.tsx';
 import RadialProgress from '../common/RadialProgress.tsx';
 import Tooltip from '../common/Tooltip.tsx';
-import { generatePerformanceNote } from '../../utils/gemini.ts';
+import { generatePerformanceNote, isAiAvailable } from '../../utils/gemini.ts';
 import { useNotification } from '../../contexts/NotificationContext.tsx';
 
 
@@ -80,6 +80,10 @@ const KpiTabContent: React.FC<KpiTabContentProps> = ({ employee, period, finalSc
     const handleSaveNote = () => {
         saveNote(employee.id, period, note);
     };
+
+    const aiTooltipText = isAiAvailable
+        ? "ایجاد یادداشت با هوش مصنوعی"
+        : "سرویس هوش مصنوعی در دسترس نیست (کلید API تنظیم نشده)";
     
     return (
         <div className="flex flex-col md:flex-row gap-6">
@@ -105,11 +109,17 @@ const KpiTabContent: React.FC<KpiTabContentProps> = ({ employee, period, finalSc
                  <div className="border-t mt-3 pt-3" style={{borderColor: 'var(--border-color)'}}>
                     <div className="flex justify-between items-center mb-2">
                          <label className="text-sm font-semibold">یادداشت برای دوره {period}</label>
-                        <Tooltip text="ایجاد یادداشت با هوش مصنوعی">
-                            <button onClick={handleGenerateNote} disabled={isGenerating} className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 disabled:cursor-wait">
-                                {isGenerating ? 'در حال ایجاد...' : 'ایجاد با AI'}
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M11.983 1.903a.75.75 0 00-1.292-.784l-1.25 2.165a.75.75 0 00.22 1.045l2.165 1.25a.75.75 0 001.045-.22l2.165-3.75a.75.75 0 00-.784-1.292L11.983 1.903zM8.017 18.097a.75.75 0 001.292.784l1.25-2.165a.75.75 0 00-.22-1.045l-2.165-1.25a.75.75 0 00-1.045.22l-2.165 3.75a.75.75 0 00.784 1.292l3.269-1.897z" /><path fillRule="evenodd" d="M12.243 9.243a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L15.939 14H8.75a.75.75 0 010-1.5h7.19l-3.7-3.7a.75.75 0 010-1.061zM4.06 4.06a.75.75 0 011.06 0l3.7 3.7H1.75a.75.75 0 110-1.5h7.06L5.12 2.56a.75.75 0 010-1.06l-.53-.53a.75.75 0 010-1.06z" clipRule="evenodd" /></svg>
-                            </button>
+                        <Tooltip text={aiTooltipText}>
+                            <span className="inline-block">
+                                <button
+                                    onClick={handleGenerateNote}
+                                    disabled={!isAiAvailable || isGenerating}
+                                    className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isGenerating ? 'در حال ایجاد...' : 'ایجاد با AI'}
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M11.983 1.903a.75.75 0 00-1.292-.784l-1.25 2.165a.75.75 0 00.22 1.045l2.165 1.25a.75.75 0 001.045-.22l2.165-3.75a.75.75 0 00-.784-1.292L11.983 1.903zM8.017 18.097a.75.75 0 001.292.784l1.25-2.165a.75.75 0 00-.22-1.045l-2.165-1.25a.75.75 0 00-1.045.22l-2.165 3.75a.75.75 0 00.784 1.292l3.269-1.897z" /><path fillRule="evenodd" d="M12.243 9.243a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L15.939 14H8.75a.75.75 0 010-1.5h7.19l-3.7-3.7a.75.75 0 010-1.061zM4.06 4.06a.75.75 0 011.06 0l3.7 3.7H1.75a.75.75 0 110-1.5h7.06L5.12 2.56a.75.75 0 010-1.06l-.53-.53a.75.75 0 010-1.06z" clipRule="evenodd" /></svg>
+                                </button>
+                            </span>
                         </Tooltip>
                     </div>
                     <textarea

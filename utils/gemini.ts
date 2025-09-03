@@ -20,14 +20,20 @@ const isApiKeyValid = (key: string | undefined): key is string => {
 // Functions using `ai` will then handle this case gracefully.
 const ai = isApiKeyValid(API_KEY) ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
-if (!ai) {
+/**
+ * A boolean flag indicating if the AI features are available.
+ * This should be used in UI components to disable AI-related functionality.
+ */
+export const isAiAvailable = !!ai;
+
+if (!isAiAvailable) {
     // Changed to console.warn to be less alarming, as this is a configuration issue, not a code error.
     console.warn("API_KEY environment variable not set or invalid. AI features will be disabled.");
 }
 
 // Function to generate performance notes
 export const generatePerformanceNote = async (employee: Employee, period: string, kpiConfigs: KpiConfigs, finalScore: number): Promise<string> => {
-    if (!ai) {
+    if (!isAiAvailable) {
         // Throw a specific error that the UI can catch and handle appropriately.
         throw new Error("AI_DISABLED");
     }
@@ -61,7 +67,7 @@ ${kpiDetails}
 
 // Function to create a new chat instance
 export const createChat = (): Chat | null => {
-    if (!ai) {
+    if (!isAiAvailable) {
         // Return null instead of throwing an error, as the UI component handles this.
         return null;
     }
