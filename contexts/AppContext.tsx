@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode, useCallback } from 'react';
 import { produce } from 'immer';
 import { AppData, Employee, Kpi, Product, Province, SalesConfig, MedicalCenter, CardSize } from '../types.ts';
-import { LOCAL_STORAGE_KEY, INITIAL_APP_DATA, BACKUP_VERSION, PERSIAN_MONTHS } from '../constants.ts';
+import { LOCAL_STORAGE_KEY, INITIAL_APP_DATA, BACKUP_VERSION } from '../constants.ts';
 import { getBackgroundImage, saveBackgroundImage, deleteBackgroundImage } from '../utils/db.ts';
 import { useNotification } from './NotificationContext.tsx';
 
@@ -62,7 +62,6 @@ interface AppContextType {
     updateMarketData: (productId: string, year: number, size: number) => void;
     updateTehranMarketData: (productId: string, year: number, size: number) => void;
     saveSalesTargetData: (employeeId: number, period: string, productId: number, type: 'target' | 'actual', value: number | null) => void;
-    zeroOutPastMonths: (employeeId: number, year: number, upToMonthIndex: number) => void;
     updateSalesPlannerState: (newState: Partial<typeof INITIAL_APP_DATA.salesPlannerState>) => void;
     updateSalesConfig: (newConfig: Partial<SalesConfig>) => void;
     setBackgroundImage: (imageFile: File | null) => void;
@@ -169,29 +168,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const updateTehranMarketData = useCallback((productId: string, year: number, size: number) => updateAppData(d => { if (!d.tehranMarketData[productId]) d.tehranMarketData[productId] = {}; d.tehranMarketData[productId][year] = size; }), [updateAppData]);
     const saveSalesTargetData = useCallback((employeeId: number, period: string, productId: number, type: 'target' | 'actual', value: number | null) => { updateAppData(d => { const et = d.salesTargets[employeeId] ??= {}; const pt = et[period] ??= {}; const pdt = pt[productId] ??= { target: 0, actual: null }; pdt[type] = value; }); showNotification('اطلاعات هدف فروش ذخیره شد.', 'success'); }, [updateAppData, showNotification]);
     
-    const zeroOutPastMonths = useCallback((employeeId: number, year: number, upToMonthIndex: number) => {
-        updateAppData(d => {
-            const employeeTargets = d.salesTargets[employeeId];
-            if (!employeeTargets) return;
-
-            for (let i = 0; i < upToMonthIndex; i++) {
-                const monthName = PERSIAN_MONTHS[i];
-                const period = `${monthName} ${year}`;
-                const periodData = employeeTargets[period];
-
-                if (periodData) {
-                    for (const productId in periodData) {
-                        if(periodData[productId]) {
-                            periodData[productId].target = 0;
-                            periodData[productId].actual = 0;
-                        }
-                    }
-                }
-            }
-        });
-        showNotification('داده‌های ماه‌های گذشته با موفقیت صفر شد.', 'success');
-    }, [updateAppData, showNotification]);
-
     const updateSalesPlannerState = useCallback((newState: Partial<typeof INITIAL_APP_DATA.salesPlannerState>) => updateAppData(d => { d.salesPlannerState = { ...d.salesPlannerState, ...newState }; }), [updateAppData]);
     const updateSalesConfig = useCallback((newConfig: Partial<SalesConfig>) => updateAppData(d => { d.salesConfig = { ...d.salesConfig, ...newConfig }; }), [updateAppData]);
     
@@ -265,7 +241,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         saveProduct, deleteProduct, saveProvinces, updateProvinceAssignment, saveMedicalCenter,
         deleteMedicalCenter, saveMedicalCenters, updateMedicalCenterAssignment, addMedicalCentersBatch, updateMarketData,
         updateTehranMarketData,
-        saveSalesTargetData, zeroOutPastMonths, updateSalesPlannerState, updateSalesConfig, setBackgroundImage,
+        saveSalesTargetData, updateSalesPlannerState, updateSalesConfig, setBackgroundImage,
         saveKpiConfig, deleteKpiConfig, restoreData, addYear, updateKpiTarget,
         setCardSize,
     };

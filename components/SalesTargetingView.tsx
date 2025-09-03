@@ -1,8 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Employee, Product, SalesTargets } from '../types.ts';
 import { getPreviousPeriod } from '../utils/calculations.ts';
 import InlineEdit from './common/InlineEdit.tsx';
-import { useAppContext } from '../contexts/AppContext.tsx';
 import { PERSIAN_MONTHS } from '../constants.ts';
 
 interface SalesTargetingViewProps {
@@ -14,17 +13,12 @@ interface SalesTargetingViewProps {
 }
 
 const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, products, salesTargets, saveSalesTargetData, availableYears }) => {
-    const { zeroOutPastMonths } = useAppContext();
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employees[0]?.id.toString() || '');
     const [year, setYear] = useState(availableYears[0] || new Date().getFullYear() + 379);
     const [month, setMonth] = useState('فروردین');
     const [zeroOutPast, setZeroOutPast] = useState(false);
 
     const period = `${month} ${year}`;
-
-    useEffect(() => {
-        setZeroOutPast(false);
-    }, [selectedEmployeeId, year]);
     
     const handleSave = (productId: number, type: 'target' | 'actual', value: string) => {
         const numValue = value === '' ? null : parseFloat(value);
@@ -34,19 +28,7 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
     };
     
     const handleZeroOutToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const isChecked = e.target.checked;
-        if (isChecked) {
-            if (confirm('آیا مطمئن هستید؟ این عمل داده‌های هدف و عملکرد ماه‌های گذشته در سال انتخاب شده را برای این کارمند صفر می‌کند و قابل بازگشت نیست.')) {
-                const employeeId = parseInt(selectedEmployeeId);
-                const currentMonthIndex = PERSIAN_MONTHS.indexOf(month);
-                if (employeeId && currentMonthIndex >= 0) {
-                    zeroOutPastMonths(employeeId, year, currentMonthIndex);
-                    setZeroOutPast(true);
-                }
-            }
-        } else {
-            setZeroOutPast(false);
-        }
+        setZeroOutPast(e.target.checked);
     };
 
     const formatCurrency = (value: number) => !isFinite(value) ? '۰' : Math.round(value).toLocaleString('fa-IR');
@@ -65,9 +47,11 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
             for (let i = 0; i < currentMonthIndex; i++) {
                 const loopPeriod = `${PERSIAN_MONTHS[i]} ${year}`;
                 const loopPeriodData = salesTargets[employeeId]?.[loopPeriod]?.[product.id];
-                const loopTarget = loopPeriodData?.target ?? 0;
-                const loopActual = loopPeriodData?.actual ?? 0;
-
+                
+                // If zeroOutPast is true, treat past months' data as 0 for calculation
+                const loopTarget = zeroOutPast ? 0 : (loopPeriodData?.target ?? 0);
+                const loopActual = zeroOutPast ? 0 : (loopPeriodData?.actual ?? 0);
+                
                 const totalTargetForLoopPeriod = loopTarget + cumulativeCarryOver;
                 cumulativeCarryOver = totalTargetForLoopPeriod - loopActual;
             }
@@ -89,7 +73,7 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
                 achievement
             };
         });
-    }, [selectedEmployeeId, period, products, salesTargets, year, month]);
+    }, [selectedEmployeeId, period, products, salesTargets, year, month, zeroOutPast]);
 
 
     return (
@@ -117,7 +101,7 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
                             onChange={handleZeroOutToggle}
                             className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
                         />
-                        <label htmlFor="zero-past-months" className="text-sm text-secondary whitespace-nowrap">صفر کردن ماه‌های قبل</label>
+                        <label htmlFor="zero-past-months" className="text-sm text-secondary whitespace-nowrap">عدم محاسبه ماه‌های قبل</label>
                     </div>
                 </div>
             </div>
