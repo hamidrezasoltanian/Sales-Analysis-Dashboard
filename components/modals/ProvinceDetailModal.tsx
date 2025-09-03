@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Province, Employee, Product, MarketData, MedicalCenter } from '../../types.ts';
 import Modal from '../common/Modal.tsx';
 
@@ -17,6 +17,23 @@ const ProvinceDetailModal: React.FC<ProvinceDetailModalProps> = ({ province, emp
     
     const formatNumber = (value: number, decimals = 0) => value.toLocaleString('fa-IR', { maximumFractionDigits: decimals });
     const formatCurrency = (value: number) => Math.round(value).toLocaleString('fa-IR');
+
+    const totals = useMemo(() => {
+        if (!assignedEmployee) return { potentialUnits: 0, targetQuantity: 0, targetValue: 0 };
+        return products.reduce((acc, product) => {
+            const totalMarketSize = marketData[product.id]?.[analysisYear] ?? 0;
+            const productShare = province.marketShare[product.id] || 0;
+            const provincePotentialUnits = (productShare / 100) * totalMarketSize;
+            const targetAcquisitionRate = assignedEmployee.targetAcquisitionRate ?? 0;
+            const annualTargetQuantity = Math.ceil(provincePotentialUnits * (targetAcquisitionRate / 100));
+            
+            acc.potentialUnits += provincePotentialUnits;
+            acc.targetQuantity += annualTargetQuantity;
+            acc.targetValue += annualTargetQuantity * product.price;
+
+            return acc;
+        }, { potentialUnits: 0, targetQuantity: 0, targetValue: 0 });
+    }, [products, marketData, analysisYear, province, assignedEmployee]);
     
     return (
         <Modal isOpen={true} onClose={closeModal} size="3xl">
@@ -58,6 +75,18 @@ const ProvinceDetailModal: React.FC<ProvinceDetailModalProps> = ({ province, emp
                                     )
                                 })}
                             </tbody>
+                             {products.length > 1 && (
+                                <tfoot style={{backgroundColor: 'var(--bg-color)'}}>
+                                    <tr className="font-bold border-t-2" style={{borderColor: 'var(--text-color)'}}>
+                                        <td className="p-2">مجموع</td>
+                                        <td className="p-2"></td>
+                                        <td className="p-2"></td>
+                                        <td className="p-2">{formatNumber(totals.potentialUnits, 1)}</td>
+                                        <td className="p-2">{formatNumber(totals.targetQuantity, 0)}</td>
+                                        <td className="p-2 text-green-600">{formatCurrency(totals.targetValue)} تومان</td>
+                                    </tr>
+                                </tfoot>
+                            )}
                         </table>
                          <p className="text-xs text-secondary mt-2">
                             * محاسبات بر اساس اندازه بازار تعریف شده برای سال <strong>{analysisYear}</strong> در تب "هدف‌گذاری فروش خودکار" انجام شده است.

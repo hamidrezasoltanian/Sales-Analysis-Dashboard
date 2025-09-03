@@ -70,21 +70,21 @@ const EmployeeProfileView: React.FC = () => {
         }
     };
 
-    const { selectedEmployee, aggregatedAnnualTarget, employeeAutoTargetForModal } = useMemo(() => {
+    const { selectedEmployee, aggregatedAnnualTarget, employeeAutoTargetForModal, selectedProducts } = useMemo(() => {
         const employee = employees.find(emp => emp.id.toString() === selectedEmployeeId);
-        if (!employee) return { selectedEmployee: undefined, aggregatedAnnualTarget: undefined, employeeAutoTargetForModal: undefined };
+        if (!employee) return { selectedEmployee: undefined, aggregatedAnnualTarget: undefined, employeeAutoTargetForModal: undefined, selectedProducts: [] };
 
-        const selectedProducts = products.filter(p => selectedProductIds.includes(p.id.toString()));
+        const currentSelectedProducts = products.filter(p => selectedProductIds.includes(p.id.toString()));
 
         const localAggregatedTarget: AggregatedTarget = {
             totalQuantity: 0,
             totalValue: 0,
-            productCount: selectedProducts.length,
-            productNames: selectedProducts.map(p => p.name),
+            productCount: currentSelectedProducts.length,
+            productNames: currentSelectedProducts.map(p => p.name),
             breakdown: [],
         };
 
-        selectedProducts.forEach(product => {
+        currentSelectedProducts.forEach(product => {
             const productIdStr = product.id.toString();
             const nationalMarketSize = marketData[productIdStr]?.[year] || 0;
             const tehranMarketSize = tehranMarketData[productIdStr]?.[year] || 0;
@@ -118,7 +118,8 @@ const EmployeeProfileView: React.FC = () => {
         return {
             selectedEmployee: employee,
             aggregatedAnnualTarget: localAggregatedTarget,
-            employeeAutoTargetForModal: localAutoTargetsForModal
+            employeeAutoTargetForModal: localAutoTargetsForModal,
+            selectedProducts: currentSelectedProducts,
         };
     }, [selectedEmployeeId, selectedProductIds, year, employees, products, marketData, tehranMarketData, provinces, medicalCenters]);
     
@@ -172,7 +173,7 @@ const EmployeeProfileView: React.FC = () => {
                         period={period}
                         aggregatedAnnualTarget={aggregatedAnnualTarget}
                         employeeAutoTargetForModal={employeeAutoTargetForModal}
-                        products={products}
+                        products={selectedProducts}
                         marketData={marketData}
                         tehranMarketData={tehranMarketData}
                         cardSize={cardSize}

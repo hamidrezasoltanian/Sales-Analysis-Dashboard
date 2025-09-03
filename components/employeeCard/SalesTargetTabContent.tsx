@@ -95,15 +95,16 @@ const SalesTargetTabContent: React.FC<SalesTargetTabContentProps> = ({
                         <span className="font-bold text-green-600">{aggregatedAnnualTarget.totalValue.toLocaleString('fa-IR')} تومان</span>
                     </div>
                     <div>
-                        <h5 className="font-semibold mb-1">مناطق تحت پوشش:</h5>
+                        <h5 className="font-semibold mb-1">مناطق تحت پوشش (برای مشاهده تحلیل کلیک کنید):</h5>
                         <div className="flex flex-wrap gap-2">
                             {assignedTerritories.length > 0 ? assignedTerritories.map(t => (
-                                <span 
+                                <button 
                                     key={t.id} 
-                                    className="bg-gray-200 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full"
+                                    onClick={() => setSelectedTerritory(t)}
+                                    className="bg-gray-200 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full hover:bg-blue-200 hover:text-blue-800 transition-colors"
                                 >
                                     {t.name}
-                                </span>
+                                </button>
                             )) : <span className="text-secondary text-xs">هیچ منطقه‌ای تخصیص داده نشده.</span>}
                         </div>
                     </div>

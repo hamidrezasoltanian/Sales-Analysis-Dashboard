@@ -70,7 +70,7 @@ const KpiDashboardView: React.FC = () => {
     };
     
 
-    const { filteredAndSortedEmployees, teamStats, trendData, aggregatedTargetsByEmployee, autoTargetsByEmployeeForModal } = useMemo(() => {
+    const { filteredAndSortedEmployees, teamStats, trendData, aggregatedTargetsByEmployee, autoTargetsByEmployeeForModal, selectedProducts } = useMemo(() => {
         const departmentFilteredEmployees = department === 'all'
             ? employees
             : employees.filter(e => e.department === department);
@@ -114,7 +114,7 @@ const KpiDashboardView: React.FC = () => {
              return trend;
         };
 
-        const selectedProducts = products.filter(p => selectedProductIds.includes(p.id.toString()));
+        const currentSelectedProducts = products.filter(p => selectedProductIds.includes(p.id.toString()));
 
         const localAggregatedTargets = new Map<number, AggregatedTarget>();
 
@@ -122,13 +122,13 @@ const KpiDashboardView: React.FC = () => {
             localAggregatedTargets.set(emp.id, {
                 totalQuantity: 0,
                 totalValue: 0,
-                productCount: selectedProducts.length,
-                productNames: selectedProducts.map(p => p.name),
+                productCount: currentSelectedProducts.length,
+                productNames: currentSelectedProducts.map(p => p.name),
                 breakdown: [],
             });
         });
 
-        selectedProducts.forEach(product => {
+        currentSelectedProducts.forEach(product => {
             const productIdStr = product.id.toString();
             const nationalMarketSize = marketData[productIdStr]?.[year] || 0;
             const tehranMarketSize = tehranMarketData[productIdStr]?.[year] || 0;
@@ -177,6 +177,7 @@ const KpiDashboardView: React.FC = () => {
             },
             aggregatedTargetsByEmployee: localAggregatedTargets,
             autoTargetsByEmployeeForModal: localAutoTargetsForModal,
+            selectedProducts: currentSelectedProducts,
         };
     }, [employees, searchTerm, sort, period, kpiConfigs, selectedProductIds, year, products, marketData, tehranMarketData, provinces, medicalCenters, department]);
 
@@ -247,7 +248,7 @@ const KpiDashboardView: React.FC = () => {
                         isReadOnly={true}
                         aggregatedAnnualTarget={aggregatedTargetsByEmployee.get(emp.id)}
                         employeeAutoTargetForModal={autoTargetsByEmployeeForModal?.get(emp.id)}
-                        products={products}
+                        products={selectedProducts}
                         marketData={marketData}
                         tehranMarketData={tehranMarketData}
                         cardSize={cardSize}
