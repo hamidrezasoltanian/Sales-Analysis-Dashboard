@@ -34,15 +34,13 @@ const AppContent: React.FC = () => {
         const currentImageUrl = appData.backgroundImage;
 
         if (currentImageUrl) {
-            document.body.style.backgroundImage = `url(${currentImageUrl})`;
+            // Apply a linear-gradient overlay directly with the image for better reliability
+            document.body.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${currentImageUrl})`;
             document.body.classList.add('with-background');
         } else {
             document.body.style.backgroundImage = 'none';
             document.body.classList.remove('with-background');
         }
-
-        // The cleanup logic has been moved to AppContext to be closer to the state update,
-        // resolving a timing issue that caused the image not to display correctly.
     }, [appData.backgroundImage]);
     
     const renderActiveView = () => {
