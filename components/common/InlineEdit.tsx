@@ -54,17 +54,21 @@ const InlineEdit: React.FC<InlineEditProps> = ({ value, onSave, placeholder = '-
                 onChange={(e) => setCurrentValue(e.target.value)}
                 onBlur={handleSave}
                 onKeyDown={handleKeyDown}
-                className="w-full p-1 border rounded-md text-center bg-gray-50 text-gray-700"
+                className="w-full p-1 border rounded-md text-center bg-white text-gray-800 shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
         );
     }
 
     return (
-        <div className="group flex items-center justify-center w-full p-1 min-h-[34px]">
+        <div 
+            onClick={() => setIsEditing(true)}
+            className="group flex items-center justify-center w-full p-1 min-h-[34px] rounded-md cursor-pointer hover:bg-blue-50 transition"
+            title="برای ویرایش کلیک کنید"
+        >
             <span className="flex-grow text-center">{displayValue}</span>
-            <button onClick={() => setIsEditing(true)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-blue-600 transition-opacity p-1 ml-1">
+            <span className="opacity-0 group-hover:opacity-100 text-blue-500 transition-opacity p-1 ml-1">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
-            </button>
+            </span>
         </div>
     );
 };
