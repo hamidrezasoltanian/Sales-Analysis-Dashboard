@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Chat } from "@google/genai";
 import { Employee, KpiConfigs } from '../types.ts';
 import { calculateKpiScore } from './calculations.ts';
@@ -5,12 +6,23 @@ import { calculateKpiScore } from './calculations.ts';
 // The API key is sourced from `process.env.API_KEY`, which is a build-time variable.
 const API_KEY = process.env.API_KEY;
 
-// Initialize the AI client. If API_KEY is not set, this will be null.
+/**
+ * A more robust check for a valid API key. It handles cases where the key might be
+ * undefined, null, an empty string, or the literal string "undefined".
+ * @param key The API key to validate.
+ * @returns True if the key is considered valid, false otherwise.
+ */
+const isApiKeyValid = (key: string | undefined): key is string => {
+    return !!key && key !== 'undefined' && key.trim() !== '';
+};
+
+// Initialize the AI client. If API_KEY is not valid, this will be null.
 // Functions using `ai` will then handle this case gracefully.
-const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+const ai = isApiKeyValid(API_KEY) ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 if (!ai) {
-    console.error("API_KEY environment variable not set. AI features will be disabled.");
+    // Changed to console.warn to be less alarming, as this is a configuration issue, not a code error.
+    console.warn("API_KEY environment variable not set or invalid. AI features will be disabled.");
 }
 
 // Function to generate performance notes
