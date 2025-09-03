@@ -17,6 +17,15 @@ const Header: React.FC<HeaderProps> = ({ activeView }) => {
     const { setQuickAddModalOpen } = useAppContext();
     const { title, description } = VIEW_TITLES[activeView] || { title: '', description: '' };
 
+    const handleQuickAddClick = () => {
+        // Make the quick add button context-aware
+        if (activeView === View.TehranManagement) {
+            setQuickAddModalOpen('medicalCenter');
+        } else {
+            setQuickAddModalOpen(true); // Let the modal use its default
+        }
+    };
+
     return (
         <header className="flex-shrink-0 flex justify-between items-center p-4 md:p-6 border-b" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--card-bg)' }}>
             <div>
@@ -26,7 +35,7 @@ const Header: React.FC<HeaderProps> = ({ activeView }) => {
             <div className="flex items-center gap-4">
                  <Tooltip text="افزودن سریع">
                     <button 
-                        onClick={() => setQuickAddModalOpen(true)}
+                        onClick={handleQuickAddClick}
                         className="btn-primary flex items-center justify-center w-10 h-10 rounded-full shadow-lg hover:shadow-xl transition-shadow"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

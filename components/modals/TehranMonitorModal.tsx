@@ -9,18 +9,18 @@ interface TehranMonitorModalProps {
     medicalCenters: MedicalCenter[];
     products: Product[];
     employees: Employee[];
-    marketData: MarketData;
+    tehranMarketData: MarketData;
     availableYears: number[];
 }
 
-const TehranMonitorModal: React.FC<TehranMonitorModalProps> = ({ closeModal, medicalCenters, products, employees, marketData, availableYears }) => {
+const TehranMonitorModal: React.FC<TehranMonitorModalProps> = ({ closeModal, medicalCenters, products, employees, tehranMarketData, availableYears }) => {
     const [year, setYear] = useState(availableYears[0]);
     const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id.toString() || '');
 
     const chartData = useMemo(() => {
         if (!selectedProductId) return [];
         
-        const totalMarketSize = marketData[selectedProductId]?.[year] ?? 0;
+        const totalMarketSize = tehranMarketData[selectedProductId]?.[year] ?? 0;
         
         return medicalCenters.map(center => {
             const assignedEmployee = employees.find(e => e.id === center.assignedTo);
@@ -40,7 +40,7 @@ const TehranMonitorModal: React.FC<TehranMonitorModalProps> = ({ closeModal, med
             };
         });
 
-    }, [selectedProductId, year, medicalCenters, products, employees, marketData]);
+    }, [selectedProductId, year, medicalCenters, products, employees, tehranMarketData]);
 
     return (
         <Modal isOpen={true} onClose={closeModal} size="4xl">
@@ -89,7 +89,7 @@ const TehranMonitorModal: React.FC<TehranMonitorModalProps> = ({ closeModal, med
                 )}
             </div>
              <p className="text-xs text-secondary mt-2 text-center">
-                * محاسبات بر اساس اندازه بازار تعریف شده برای سال <strong>{year}</strong> انجام شده است. برای تغییر اندازه بازار به تب "هدف‌گذاری فروش خودکار" مراجعه کنید.
+                * محاسبات بر اساس اندازه بازار تهران که برای سال <strong>{year}</strong> تعریف شده، انجام شده است. برای تغییر به تب "هدف‌گذاری فروش خودکار" مراجعه کنید.
             </p>
 
             <div className="text-center mt-6">

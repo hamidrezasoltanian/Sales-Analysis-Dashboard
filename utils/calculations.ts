@@ -150,11 +150,13 @@ const calculateFullTimeBreakdown = (annualTargetQuantity: number, price: number)
 
 export const calculateAutoTargets = (
     employees: Employee[],
-    territories: (Province | MedicalCenter)[],
+    provinces: Province[],
+    medicalCenters: MedicalCenter[],
     selectedProduct: Product | undefined,
-    totalMarketSize: number
+    nationalMarketSize: number,
+    tehranMarketSize: number
 ): EmployeeAutoTarget[] => {
-    if (!selectedProduct || totalMarketSize <= 0) return [];
+    if (!selectedProduct) return [];
     
     const employeeTargets = new Map<number, EmployeeAutoTarget>();
     employees.forEach(e => {
@@ -164,23 +166,29 @@ export const calculateAutoTargets = (
         });
     });
 
-    territories.forEach(territory => {
-        if (territory.assignedTo !== null) {
-            const employeeTarget = employeeTargets.get(territory.assignedTo);
-            if(employeeTarget) {
-                const territoryShare = territory.marketShare[selectedProduct.id] || 0;
-                const territoryPotential = (territoryShare / 100) * totalMarketSize;
-                const annualTargetQty = territoryPotential * ((employeeTarget.targetAcquisitionRate) / 100);
-                
-                employeeTarget.totalShare += territoryShare;
-                employeeTarget.territories.push({
-                    territoryName: territory.name,
-                    territoryShare,
-                    annual: calculateFullTimeBreakdown(annualTargetQty, selectedProduct.price),
-                });
+    const processTerritories = (territories: (Province | MedicalCenter)[], marketSize: number) => {
+        if (marketSize <= 0) return;
+        territories.forEach(territory => {
+            if (territory.assignedTo !== null) {
+                const employeeTarget = employeeTargets.get(territory.assignedTo);
+                if(employeeTarget) {
+                    const territoryShare = territory.marketShare[selectedProduct.id] || 0;
+                    const territoryPotential = (territoryShare / 100) * marketSize;
+                    const annualTargetQty = territoryPotential * (employeeTarget.targetAcquisitionRate / 100);
+                    
+                    employeeTarget.totalShare += territoryShare;
+                    employeeTarget.territories.push({
+                        territoryName: territory.name,
+                        territoryShare,
+                        annual: calculateFullTimeBreakdown(annualTargetQty, selectedProduct.price),
+                    });
+                }
             }
-        }
-    });
+        });
+    };
+
+    processTerritories(provinces, nationalMarketSize);
+    processTerritories(medicalCenters, tehranMarketSize);
     
     // Sum up province targets to get final employee totals
     employeeTargets.forEach(target => {

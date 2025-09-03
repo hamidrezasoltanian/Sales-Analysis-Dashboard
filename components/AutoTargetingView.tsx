@@ -9,7 +9,9 @@ interface AutoTargetingViewProps {
     provinces: Province[];
     medicalCenters: MedicalCenter[];
     marketData: MarketData;
+    tehranMarketData: MarketData;
     updateMarketData: (productId: string, year: number, size: number) => void;
+    updateTehranMarketData: (productId: string, year: number, size: number) => void;
     availableYears: number[];
 }
 
@@ -109,7 +111,7 @@ const TerritoryRows: React.FC<{ territories: TerritoryTargetDetail[], level: num
 };
 
 
-const AutoTargetingView: React.FC<AutoTargetingViewProps> = ({ employees, products, provinces, medicalCenters, marketData, updateMarketData, availableYears }) => {
+const AutoTargetingView: React.FC<AutoTargetingViewProps> = ({ employees, products, provinces, medicalCenters, marketData, tehranMarketData, updateMarketData, updateTehranMarketData, availableYears }) => {
     const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id.toString() || '');
     const [year, setYear] = useState(availableYears[0]);
     const [expandedRows, setExpandedRows] = useState<{ [key: string]: boolean }>({});
@@ -121,6 +123,7 @@ const AutoTargetingView: React.FC<AutoTargetingViewProps> = ({ employees, produc
     }, [selectedProductId, products]);
 
     const totalMarketSize = marketData[selectedProductId]?.[year] || 0;
+    const totalTehranMarketSize = tehranMarketData[selectedProductId]?.[year] || 0;
     
     useEffect(() => {
         if (!selectedProductId && products.length > 0) {
@@ -135,9 +138,8 @@ const AutoTargetingView: React.FC<AutoTargetingViewProps> = ({ employees, produc
     }, [availableYears, year]);
 
     const calculatedTargets = useMemo(() => {
-        const territories = [...provinces, ...medicalCenters];
-        return calculateAutoTargets(employees, territories, selectedProduct, totalMarketSize);
-    }, [employees, provinces, medicalCenters, selectedProduct, totalMarketSize]);
+        return calculateAutoTargets(employees, provinces, medicalCenters, selectedProduct, totalMarketSize, totalTehranMarketSize);
+    }, [employees, provinces, medicalCenters, selectedProduct, totalMarketSize, totalTehranMarketSize]);
     
     const handleMarketSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const size = parseFloat(e.target.value) || 0;
@@ -146,12 +148,19 @@ const AutoTargetingView: React.FC<AutoTargetingViewProps> = ({ employees, produc
         }
     };
     
+    const handleTehranMarketSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const size = parseFloat(e.target.value) || 0;
+        if (selectedProductId) {
+            updateTehranMarketData(selectedProductId, year, size);
+        }
+    };
+
     const totalAnnualQuantity = calculatedTargets.reduce((sum, item) => sum + item.annual.quantity, 0);
     const totalAnnualValue = calculatedTargets.reduce((sum, item) => sum + item.annual.value, 0);
 
     return (
         <div className="fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 p-4 rounded-lg border card" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-color)' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 rounded-lg border card" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-color)' }}>
                 <div>
                     <label className="block text-sm font-medium mb-1">محصول</label>
                     <select value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)} className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700">
@@ -165,8 +174,12 @@ const AutoTargetingView: React.FC<AutoTargetingViewProps> = ({ employees, produc
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium mb-1">اندازه کل بازار (تعداد)</label>
+                    <label className="block text-sm font-medium mb-1">اندازه بازار استان‌ها (تعداد)</label>
                     <input type="number" value={totalMarketSize || ''} onChange={handleMarketSizeChange} className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
+                </div>
+                 <div>
+                    <label className="block text-sm font-medium mb-1">اندازه بازار تهران (تعداد)</label>
+                    <input type="number" value={totalTehranMarketSize || ''} onChange={handleTehranMarketSizeChange} className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700" />
                 </div>
             </div>
 
@@ -204,7 +217,7 @@ const AutoTargetingView: React.FC<AutoTargetingViewProps> = ({ employees, produc
                         }) : (
                             <tr>
                                 <td colSpan={5} className="text-center p-8 text-secondary">
-                                    {totalMarketSize > 0 ? 'هیچ استان یا مرکز درمانی به کارمندان تخصیص داده نشده است.' : 'لطفا اندازه بازار را برای محاسبه اهداف وارد کنید.'}
+                                    {(totalMarketSize > 0 || totalTehranMarketSize > 0) ? 'هیچ استان یا مرکز درمانی به کارمندان تخصیص داده نشده است.' : 'لطفا اندازه بازار را برای محاسبه اهداف وارد کنید.'}
                                 </td>
                             </tr>
                         )}

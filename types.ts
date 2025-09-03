@@ -110,6 +110,7 @@ export interface AppData {
     provinces: Province[];
     medicalCenters: MedicalCenter[];
     marketData: MarketData;
+    tehranMarketData: MarketData; // New field for Tehran-specific market data
     availableYears: number[];
     backgroundImage: string | null;
 }

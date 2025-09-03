@@ -23,6 +23,7 @@ const loadDataFromLocalStorage = (): AppData => {
                     prov.assignedTo = prov.assignedTo ?? null;
                 });
                 if (!draft.medicalCenters) draft.medicalCenters = [];
+                if (!draft.tehranMarketData) draft.tehranMarketData = {};
                  // Ensure backgroundImage is not loaded from localStorage, it's handled by IndexedDB
                 draft.backgroundImage = null;
             });
@@ -55,6 +56,7 @@ interface AppContextType {
     saveMedicalCenters: (centers: MedicalCenter[]) => void;
     updateMedicalCenterAssignment: (centerId: string, employeeId: number | null) => void;
     updateMarketData: (productId: string, year: number, size: number) => void;
+    updateTehranMarketData: (productId: string, year: number, size: number) => void;
     saveSalesTargetData: (employeeId: number, period: string, productId: number, type: 'target' | 'actual', value: number | null) => void;
     updateSalesPlannerState: (newState: Partial<typeof INITIAL_APP_DATA.salesPlannerState>) => void;
     updateSalesConfig: (newConfig: Partial<SalesConfig>) => void;
@@ -117,6 +119,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const saveMedicalCenters = useCallback((centers: MedicalCenter[]) => updateAppData(d => { d.medicalCenters = centers; }), [updateAppData]);
     const updateMedicalCenterAssignment = useCallback((centerId: string, employeeId: number | null) => updateAppData(d => { const c = d.medicalCenters.find(cen => cen.id === centerId); if (c) c.assignedTo = employeeId; }), [updateAppData]);
     const updateMarketData = useCallback((productId: string, year: number, size: number) => updateAppData(d => { if (!d.marketData[productId]) d.marketData[productId] = {}; d.marketData[productId][year] = size; }), [updateAppData]);
+    const updateTehranMarketData = useCallback((productId: string, year: number, size: number) => updateAppData(d => { if (!d.tehranMarketData[productId]) d.tehranMarketData[productId] = {}; d.tehranMarketData[productId][year] = size; }), [updateAppData]);
     const saveSalesTargetData = useCallback((employeeId: number, period: string, productId: number, type: 'target' | 'actual', value: number | null) => updateAppData(d => { const et = d.salesTargets[employeeId] ??= {}; const pt = et[period] ??= {}; const pdt = pt[productId] ??= { target: 0, actual: null }; pdt[type] = value; }), [updateAppData]);
     const updateSalesPlannerState = useCallback((newState: Partial<typeof INITIAL_APP_DATA.salesPlannerState>) => updateAppData(d => { d.salesPlannerState = { ...d.salesPlannerState, ...newState }; }), [updateAppData]);
     const updateSalesConfig = useCallback((newConfig: Partial<SalesConfig>) => updateAppData(d => { d.salesConfig = { ...d.salesConfig, ...newConfig }; }), [updateAppData]);
@@ -161,6 +164,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
              draft.employees.forEach(emp => { emp.targetAcquisitionRate ??= 10; });
              draft.provinces.forEach(prov => { prov.assignedTo ??= null; });
              if (!draft.medicalCenters) draft.medicalCenters = [];
+             if (!draft.tehranMarketData) draft.tehranMarketData = {};
              draft.backgroundImage = null; // Background image is not part of JSON backup
         });
         setAppData(validatedData);
@@ -174,6 +178,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addEmployee, updateEmployee, deleteEmployee, addKpiToEmployee, recordScore, saveNote,
         saveProduct, deleteProduct, saveProvinces, updateProvinceAssignment, saveMedicalCenter,
         deleteMedicalCenter, saveMedicalCenters, updateMedicalCenterAssignment, updateMarketData,
+        updateTehranMarketData,
         saveSalesTargetData, updateSalesPlannerState, updateSalesConfig, setBackgroundImage,
         saveKpiConfig, deleteKpiConfig, restoreData, addYear,
     };

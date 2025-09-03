@@ -82,5 +82,6 @@ export const INITIAL_APP_DATA: AppData = {
     provinces: INITIAL_PROVINCES,
     medicalCenters: [],
     marketData: {},
+    tehranMarketData: {},
     backgroundImage: null,
 };

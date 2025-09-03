@@ -6,7 +6,7 @@ import SalesTargetingView from './SalesTargetingView.tsx';
 
 const SalesTargetingPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'auto' | 'manual'>('auto');
-    const { appData, updateMarketData, saveSalesTargetData } = useAppContext();
+    const { appData, updateMarketData, saveSalesTargetData, updateTehranMarketData } = useAppContext();
 
     return (
         <div className="fade-in">
@@ -27,7 +27,9 @@ const SalesTargetingPage: React.FC = () => {
                         provinces={appData.provinces}
                         medicalCenters={appData.medicalCenters}
                         marketData={appData.marketData}
+                        tehranMarketData={appData.tehranMarketData}
                         updateMarketData={updateMarketData}
+                        updateTehranMarketData={updateTehranMarketData}
                         availableYears={appData.availableYears}
                     />
                 )}

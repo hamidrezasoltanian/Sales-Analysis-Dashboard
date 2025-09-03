@@ -7,9 +7,14 @@ import { useAppContext } from '../contexts/AppContext.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
 import Tooltip from './common/Tooltip.tsx';
 
+// New local type to handle string inputs for market share, improving decimal input UX
+interface ProvinceForUI extends Omit<Province, 'marketShare'> {
+    marketShare: { [productId: string]: string };
+}
+
 // --- Sub-components for ManagementView ---
 const ProductManager: React.FC = () => {
-    const { appData: { products }, saveProduct, deleteProduct, setQuickAddModalOpen } = useAppContext();
+    const { appData: { products }, deleteProduct, setQuickAddModalOpen } = useAppContext();
     const { showNotification } = useNotification();
 
     const handleDelete = (productId: number) => {
@@ -50,23 +55,42 @@ const ProductManager: React.FC = () => {
 const ProvinceManager: React.FC<{ yearForAnalysis: number; }> = ({ yearForAnalysis }) => {
     const { appData: { provinces, products, employees, marketData }, saveProvinces, updateProvinceAssignment } = useAppContext();
     const { showNotification } = useNotification();
-    const [localProvinces, setLocalProvinces] = useState(provinces);
+    const [localProvinces, setLocalProvinces] = useState<ProvinceForUI[]>([]);
     const [selectedProvince, setSelectedProvince] = useState<Province | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    useEffect(() => setLocalProvinces(provinces), [provinces]);
+    useEffect(() => {
+        // Convert numbers to strings for the initial state to allow flexible input
+        setLocalProvinces(provinces.map(province => ({
+            ...province,
+            marketShare: Object.fromEntries(
+                Object.entries(province.marketShare).map(([key, value]) => [key, String(value || '')])
+            ),
+        })));
+    }, [provinces]);
 
     const handleShareChange = (provinceId: string, productId: number, value: string) => {
-        setLocalProvinces(produce(draft => {
-            const province = draft.find(p => p.id === provinceId);
-            if (province) province.marketShare[productId] = parseFloat(value) || 0;
-        }));
+        // Allow only valid decimal patterns (e.g., 12, 12.3, 12.34, .5)
+        if (/^\d*\.?\d{0,2}$/.test(value)) {
+            setLocalProvinces(produce(draft => {
+                const province = draft.find(p => p.id === provinceId);
+                if (province) province.marketShare[productId] = value;
+            }));
+        }
     };
     
     const handleSave = () => {
         setIsLoading(true);
+        // Convert market share strings back to numbers before saving
+        const provincesToSave: Province[] = localProvinces.map(provinceUI => ({
+            ...provinceUI,
+            marketShare: Object.fromEntries(
+                Object.entries(provinceUI.marketShare).map(([pid, val]) => [pid, parseFloat(val) || 0])
+            )
+        }));
+
         setTimeout(() => {
-            saveProvinces(localProvinces);
+            saveProvinces(provincesToSave);
             setIsLoading(false);
             showNotification('تغییرات با موفقیت ذخیره شد.', 'success');
         }, 500); // Simulate network delay
@@ -96,12 +120,18 @@ const ProvinceManager: React.FC<{ yearForAnalysis: number; }> = ({ yearForAnalys
                                 </td>
                                 {products.map(product => (
                                     <td key={product.id} className="p-2 border-b">
-                                        <input type="number" step="0.01" min="0" max="100" value={province.marketShare[product.id] || ''} onChange={(e) => handleShareChange(province.id, product.id, e.target.value)} className="w-20 p-1 border rounded-md text-center bg-gray-50 text-gray-700" />
+                                        <input 
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={province.marketShare[product.id] || ''} 
+                                            onChange={(e) => handleShareChange(province.id, product.id, e.target.value)} 
+                                            className="w-20 p-1 border rounded-md text-center bg-gray-50 text-gray-700" 
+                                        />
                                     </td>
                                 ))}
                                 <td className="p-2 border-b text-center">
                                     <Tooltip text="مشاهده جزئیات و تحلیل">
-                                        <button onClick={() => setSelectedProvince(province)} className="text-blue-500 hover:text-blue-700">
+                                        <button onClick={() => setSelectedProvince(provinces.find(p => p.id === province.id) || null)} className="text-blue-500 hover:text-blue-700">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" /><path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" /></svg>
                                         </button>
                                     </Tooltip>
@@ -133,7 +163,7 @@ const ManagementView: React.FC = () => {
     const [year, setYear] = useState(availableYears[0]);
     
     useEffect(() => {
-        if (!availableYears.includes(year)) setYear(availableYears[0]);
+        if (!availableYears.includes(year) && availableYears.length > 0) setYear(availableYears[0]);
     }, [availableYears, year]);
 
     return (
