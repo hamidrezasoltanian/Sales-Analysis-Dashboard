@@ -5,7 +5,7 @@ import { MedicalCenter, Employee, Product } from '../types.ts';
 import TehranMonitorModal from './modals/TehranMonitorModal.tsx';
 import { useAppContext } from '../contexts/AppContext.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
-import { parseMedicalCentersCsv } from '../utils/csvParser.ts';
+import { parseMedicalCentersCsv } from '../../utils/csvParser.ts';
 
 // New local type to handle string inputs for market share, improving decimal input UX
 interface MedicalCenterForUI extends Omit<MedicalCenter, 'marketShare'> {

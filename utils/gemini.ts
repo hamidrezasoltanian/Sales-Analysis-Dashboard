@@ -3,8 +3,8 @@ import { GoogleGenAI, Chat } from "@google/genai";
 import { Employee, KpiConfigs } from '../types.ts';
 import { calculateKpiScore } from './calculations.ts';
 
-// The API key is sourced from `process.env.API_KEY`, which is a build-time variable.
-const API_KEY = process.env.API_KEY;
+// Use the API key provided by the user to ensure functionality.
+const API_KEY = "AIzaSyBGQO13FcCZmBtitneX7kumZPdZxg0P0DU";
 
 let ai: GoogleGenAI;
 
