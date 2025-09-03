@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext, ReactNode, useCallback } from 'react';
 import { produce } from 'immer';
 import { AppData, Employee, Kpi, Product, Province, SalesConfig, MedicalCenter } from '../types.ts';
@@ -110,10 +109,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // All the data manipulation functions from App.tsx are memoized here
     const addYear = useCallback((year: number) => updateAppData(d => { if (!d.availableYears.includes(year)) { d.availableYears.push(year); d.availableYears.sort((a, b) => b - a); } }), [updateAppData]);
     const addEmployee = useCallback((name: string, title: string, department: string) => updateAppData(d => { d.employees.push({ id: Date.now(), name, title, department, kpis: [], notes: {}, targetAcquisitionRate: 10 }); }), [updateAppData]);
-    const updateEmployee = useCallback((id: number, name: string, title: string, department: string, targetAcquisitionRate: number) => updateAppData(d => { const e = d.employees.find(emp => emp.id === id); if (e) Object.assign(e, { name, title, department, targetAcquisitionRate }); }), [updateAppData]);
+    const updateEmployee = useCallback((id: number, name: string, title: string, department: string, targetAcquisitionRate: number) => { updateAppData(d => { const e = d.employees.find(emp => emp.id === id); if (e) Object.assign(e, { name, title, department, targetAcquisitionRate }); }); showNotification('اطلاعات کارمند با موفقیت به‌روز شد.', 'success'); }, [updateAppData, showNotification]);
     const deleteEmployee = useCallback((id: number) => updateAppData(d => { d.employees = d.employees.filter(e => e.id !== id); d.provinces.forEach(p => { if (p.assignedTo === id) p.assignedTo = null; }); d.medicalCenters.forEach(c => { if (c.assignedTo === id) c.assignedTo = null; }); }), [updateAppData]);
     const addKpiToEmployee = useCallback((employeeId: number, type: string, target?: number) => updateAppData(d => { const e = d.employees.find(emp => emp.id === employeeId); if (e) { const k: Kpi = { id: Date.now(), type, scores: {} }; if (target !== undefined) k.target = target; e.kpis.push(k); } }), [updateAppData]);
-    const recordScore = useCallback((employeeId: number, kpiId: number, period: string, value: number | null) => updateAppData(d => { const k = d.employees.find(e => e.id === employeeId)?.kpis.find(kpi => kpi.id === kpiId); if (k) { if (value === null || isNaN(value)) delete k.scores[period]; else k.scores[period] = value; } }), [updateAppData]);
+    const recordScore = useCallback((employeeId: number, kpiId: number, period: string, value: number | null) => { updateAppData(d => { const k = d.employees.find(e => e.id === employeeId)?.kpis.find(kpi => kpi.id === kpiId); if (k) { if (value === null || isNaN(value)) delete k.scores[period]; else k.scores[period] = value; } }); showNotification('امتیاز با موفقیت ثبت شد.', 'success'); }, [updateAppData, showNotification]);
     const updateKpiTarget = useCallback((employeeId: number, kpiId: number, target: number | null) => {
         updateAppData(d => {
             const employee = d.employees.find(e => e.id === employeeId);
@@ -128,16 +127,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 }
             }
         });
-    }, [updateAppData]);
-    const saveNote = useCallback((employeeId: number, period: string, note: string) => updateAppData(d => { const e = d.employees.find(emp => emp.id === employeeId); if (e) { if (note.trim()) e.notes[period] = note; else delete e.notes[period]; } }), [updateAppData]);
+        showNotification('هدف KPI با موفقیت به‌روز شد.', 'success');
+    }, [updateAppData, showNotification]);
+    const saveNote = useCallback((employeeId: number, period: string, note: string) => { updateAppData(d => { const e = d.employees.find(emp => emp.id === employeeId); if (e) { if (note.trim()) e.notes[period] = note; else delete e.notes[period]; } }); showNotification('یادداشت با موفقیت ذخیره شد.', 'success'); }, [updateAppData, showNotification]);
     const saveProduct = useCallback((product: Product) => updateAppData(d => { const i = d.products.findIndex(p => p.id === product.id); if (i > -1) d.products[i] = product; else d.products.push({ ...product, id: Date.now() }); }), [updateAppData]);
     const deleteProduct = useCallback((productId: number) => updateAppData(d => { d.products = d.products.filter(p => p.id !== productId); }), [updateAppData]);
     const saveProvinces = useCallback((provinces: Province[]) => updateAppData(d => { d.provinces = provinces; }), [updateAppData]);
-    const updateProvinceAssignment = useCallback((provinceId: string, employeeId: number | null) => updateAppData(d => { const p = d.provinces.find(prov => prov.id === provinceId); if (p) p.assignedTo = employeeId; }), [updateAppData]);
+    const updateProvinceAssignment = useCallback((provinceId: string, employeeId: number | null) => { updateAppData(d => { const p = d.provinces.find(prov => prov.id === provinceId); if (p) p.assignedTo = employeeId; }); showNotification('مسئول استان تخصیص داده شد.', 'success'); }, [updateAppData, showNotification]);
     const saveMedicalCenter = useCallback((center: MedicalCenter) => updateAppData(d => { const i = d.medicalCenters.findIndex(c => c.id === center.id); if (i > -1) d.medicalCenters[i] = center; else d.medicalCenters.push({ ...center, id: `mc_${Date.now()}` }); }), [updateAppData]);
     const deleteMedicalCenter = useCallback((centerId: string) => updateAppData(d => { d.medicalCenters = d.medicalCenters.filter(c => c.id !== centerId); }), [updateAppData]);
     const saveMedicalCenters = useCallback((centers: MedicalCenter[]) => updateAppData(d => { d.medicalCenters = centers; }), [updateAppData]);
-    const updateMedicalCenterAssignment = useCallback((centerId: string, employeeId: number | null) => updateAppData(d => { const c = d.medicalCenters.find(cen => cen.id === centerId); if (c) c.assignedTo = employeeId; }), [updateAppData]);
+    const updateMedicalCenterAssignment = useCallback((centerId: string, employeeId: number | null) => { updateAppData(d => { const c = d.medicalCenters.find(cen => cen.id === centerId); if (c) c.assignedTo = employeeId; }); showNotification('مسئول مرکز درمانی تخصیص داده شد.', 'success'); }, [updateAppData, showNotification]);
     const addMedicalCentersBatch = useCallback((names: string[]): { added: number, skipped: number } => {
         let added = 0;
         let skipped = 0;
@@ -164,7 +164,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, [updateAppData]);
     const updateMarketData = useCallback((productId: string, year: number, size: number) => updateAppData(d => { if (!d.marketData[productId]) d.marketData[productId] = {}; d.marketData[productId][year] = size; }), [updateAppData]);
     const updateTehranMarketData = useCallback((productId: string, year: number, size: number) => updateAppData(d => { if (!d.tehranMarketData[productId]) d.tehranMarketData[productId] = {}; d.tehranMarketData[productId][year] = size; }), [updateAppData]);
-    const saveSalesTargetData = useCallback((employeeId: number, period: string, productId: number, type: 'target' | 'actual', value: number | null) => updateAppData(d => { const et = d.salesTargets[employeeId] ??= {}; const pt = et[period] ??= {}; const pdt = pt[productId] ??= { target: 0, actual: null }; pdt[type] = value; }), [updateAppData]);
+    const saveSalesTargetData = useCallback((employeeId: number, period: string, productId: number, type: 'target' | 'actual', value: number | null) => { updateAppData(d => { const et = d.salesTargets[employeeId] ??= {}; const pt = et[period] ??= {}; const pdt = pt[productId] ??= { target: 0, actual: null }; pdt[type] = value; }); showNotification('اطلاعات هدف فروش ذخیره شد.', 'success'); }, [updateAppData, showNotification]);
     const updateSalesPlannerState = useCallback((newState: Partial<typeof INITIAL_APP_DATA.salesPlannerState>) => updateAppData(d => { d.salesPlannerState = { ...d.salesPlannerState, ...newState }; }), [updateAppData]);
     const updateSalesConfig = useCallback((newConfig: Partial<SalesConfig>) => updateAppData(d => { d.salesConfig = { ...d.salesConfig, ...newConfig }; }), [updateAppData]);
     
@@ -199,8 +199,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     }, [updateAppData]);
 
-    const saveKpiConfig = useCallback((id: string, name: string, maxPoints: number, formula: string) => updateAppData(d => { d.kpiConfigs[id] = { name, maxPoints, formula }; }), [updateAppData]);
-    const deleteKpiConfig = useCallback((id: string) => updateAppData(d => { delete d.kpiConfigs[id]; d.employees.forEach(e => { e.kpis = e.kpis.filter(k => k.type !== id); }); }), [updateAppData]);
+    const saveKpiConfig = useCallback((id: string, name: string, maxPoints: number, formula: string) => { updateAppData(d => { d.kpiConfigs[id] = { name, maxPoints, formula }; }); showNotification('تنظیمات KPI ذخیره شد.', 'success'); }, [updateAppData, showNotification]);
+    const deleteKpiConfig = useCallback((id: string) => { updateAppData(d => { delete d.kpiConfigs[id]; d.employees.forEach(e => { e.kpis = e.kpis.filter(k => k.type !== id); }); }); showNotification('نوع KPI با موفقیت حذف شد.', 'success'); }, [updateAppData, showNotification]);
     const restoreData = useCallback((data: AppData) => {
         if (!data.backup_version) {
             showNotification('فایل پشتیبان قدیمی شناسایی شد. بازیابی با بهترین تلاش انجام می‌شود.', 'info');

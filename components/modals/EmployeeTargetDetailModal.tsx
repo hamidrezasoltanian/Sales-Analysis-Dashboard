@@ -96,7 +96,7 @@ const EmployeeTargetDetailModal: React.FC<EmployeeTargetDetailModalProps> = ({ t
     return (
         <Modal isOpen={true} onClose={closeModal} size="4xl">
             <h3 className="text-2xl font-bold mb-4">جزئیات کامل اهداف: {targetData.employeeName}</h3>
-             <div className="max-h-[70vh] overflow-y-auto border rounded-lg">
+             <div className="max-h-[80vh] overflow-y-auto border rounded-lg">
                 <table className="w-full text-sm text-right border-collapse">
                     <thead className="sticky top-0 z-10" style={{backgroundColor: 'var(--bg-color)'}}>
                         <tr>

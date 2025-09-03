@@ -35,47 +35,41 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
         const employeeId = parseInt(selectedEmployeeId);
         if (!employeeId) return [];
 
+        const currentMonthIndex = PERSIAN_MONTHS.indexOf(month);
+
         return products.map(product => {
-            let carryOver = 0;
-            
-            // Calculate carry-over from the previous period (t-1).
-            const prevPeriod = getPreviousPeriod(period);
-            const prevData = salesTargets[employeeId]?.[prevPeriod]?.[product.id];
+            let cumulativeCarryOver = 0;
 
-            if (prevData) {
-                // To calculate carry-over from t-1, we need total target and actual for t-1.
-                // Total target for t-1 = target(t-1) + carry-over(t-2).
-                // A simplified calculation for carry-over(t-2) is used here.
-                const prevPrevPeriod = getPreviousPeriod(prevPeriod);
-                const prevPrevData = salesTargets[employeeId]?.[prevPrevPeriod]?.[product.id];
-                
-                const carryOverIntoPrevPeriod = prevPrevData 
-                    ? Math.max(0, (prevPrevData.target ?? 0) - (prevPrevData.actual ?? 0))
-                    : 0;
+            // Calculate carry-over by iterating from the start of the year up to the previous month
+            for (let i = 0; i < currentMonthIndex; i++) {
+                const loopPeriod = `${PERSIAN_MONTHS[i]} ${year}`;
+                const loopPeriodData = salesTargets[employeeId]?.[loopPeriod]?.[product.id];
+                const loopTarget = loopPeriodData?.target ?? 0;
+                const loopActual = loopPeriodData?.actual ?? 0;
 
-                const totalTargetForPrevPeriod = (prevData.target ?? 0) + carryOverIntoPrevPeriod;
-                carryOver = Math.max(0, totalTargetForPrevPeriod - (prevData.actual ?? 0));
+                const totalTargetForLoopPeriod = loopTarget + cumulativeCarryOver;
+                cumulativeCarryOver = totalTargetForLoopPeriod - loopActual;
             }
 
             const currentData = salesTargets[employeeId]?.[period]?.[product.id];
             const target = currentData?.target ?? 0;
-            const actual = currentData?.actual ?? 0;
+            const actual = currentData?.actual; // Can be null
             
-            const totalTarget = target + carryOver;
-            const shortfall = totalTarget - actual;
-            const achievement = totalTarget > 0 ? (actual / totalTarget) * 100 : 0;
+            const totalTarget = target + cumulativeCarryOver;
+            const achievement = totalTarget > 0 ? ((actual ?? 0) / totalTarget) * 100 : 0;
 
             return {
                 ...product,
-                carryOver: Math.round(carryOver),
+                carryOver: cumulativeCarryOver,
                 target,
-                actual,
-                totalTarget: Math.round(totalTarget),
-                shortfall,
+                actual: actual, // Pass null through
+                totalTarget: totalTarget,
+                shortfall: totalTarget - (actual ?? 0),
                 achievement
             };
         });
-    }, [selectedEmployeeId, period, products, salesTargets]);
+    }, [selectedEmployeeId, period, products, salesTargets, year, month]);
+
 
     return (
         <div>
@@ -100,7 +94,7 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
                         <thead className="bg-gray-100" style={{backgroundColor: 'var(--bg-color)'}}>
                             <tr>
                                 <th className="p-3">محصول</th>
-                                <th className="p-3">کسری از قبل</th>
+                                <th className="p-3">انتقالی از قبل</th>
                                 <th className="p-3">هدف ماه (تعداد)</th>
                                 <th className="p-3">عملکرد واقعی (تعداد)</th>
                                 <th className="p-3">هدف نهایی</th>
@@ -113,7 +107,7 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
                             {calculatedData.map(item => (
                                 <tr key={item.id} className="border-b" style={{borderColor: 'var(--border-color)'}}>
                                     <td className="p-3 font-semibold">{item.name}<br/><small className="font-normal text-secondary">{formatCurrency(item.price)} تومان</small></td>
-                                    <td className="p-3 text-orange-600">{item.carryOver.toLocaleString('fa-IR')}</td>
+                                    <td className={`p-3 font-semibold ${item.carryOver < 0 ? 'text-green-600' : 'text-orange-600'}`}>{Math.round(item.carryOver).toLocaleString('fa-IR')}</td>
                                     <td className="p-3 w-32">
                                         <InlineEdit
                                             value={item.target || null}
@@ -124,13 +118,13 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
                                     </td>
                                     <td className="p-3 w-32">
                                          <InlineEdit
-                                            value={item.actual || null}
+                                            value={item.actual}
                                             onSave={(value) => handleSave(item.id, 'actual', value)}
                                             placeholder="تعداد"
                                             formatter={numberFormatter}
                                         />
                                     </td>
-                                    <td className="p-3 font-bold">{item.totalTarget.toLocaleString('fa-IR')}</td>
+                                    <td className="p-3 font-bold">{Math.round(item.totalTarget).toLocaleString('fa-IR')}</td>
                                     <td className="p-3">
                                         <div className="w-full bg-gray-200 rounded-full h-2.5">
                                             <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${Math.min(item.achievement, 100)}%` }}></div>
@@ -145,10 +139,10 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
                          <tfoot>
                             <tr className="font-bold" style={{backgroundColor: 'var(--bg-color)'}}>
                                 <td className="p-3">مجموع</td>
-                                <td className="p-3 text-orange-600">{calculatedData.reduce((sum, item) => sum + item.carryOver, 0).toLocaleString('fa-IR')}</td>
+                                <td className="p-3">{Math.round(calculatedData.reduce((sum, item) => sum + item.carryOver, 0)).toLocaleString('fa-IR')}</td>
                                 <td className="p-3">{calculatedData.reduce((sum, item) => sum + item.target, 0).toLocaleString('fa-IR')}</td>
                                 <td className="p-3">{calculatedData.reduce((sum, item) => sum + (item.actual || 0), 0).toLocaleString('fa-IR')}</td>
-                                <td className="p-3">{calculatedData.reduce((sum, item) => sum + item.totalTarget, 0).toLocaleString('fa-IR')}</td>
+                                <td className="p-3">{Math.round(calculatedData.reduce((sum, item) => sum + item.totalTarget, 0)).toLocaleString('fa-IR')}</td>
                                 <td className="p-3"></td>
                                 <td className="p-3">{formatCurrency(calculatedData.reduce((sum, item) => sum + item.totalTarget * item.price, 0))}</td>
                                 <td className="p-3 text-green-600">{formatCurrency(calculatedData.reduce((sum, item) => sum + (item.actual || 0) * item.price, 0))}</td>

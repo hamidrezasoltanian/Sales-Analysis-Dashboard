@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Province, Employee, Product, MarketData, MedicalCenter } from '../../types.ts';
 import Modal from '../common/Modal.tsx';
@@ -25,7 +26,7 @@ const ProvinceDetailModal: React.FC<ProvinceDetailModalProps> = ({ province, emp
                     <p className="text-secondary mb-4">
                         مسئول فروش: <span className="font-semibold" style={{color: 'var(--text-color)'}}>{assignedEmployee.name}</span> | درصد هدف فردی: <span className="font-semibold" style={{color: 'var(--text-color)'}}>{assignedEmployee.targetAcquisitionRate}%</span>
                     </p>
-                    <div className="max-h-[60vh] overflow-y-auto">
+                    <div className="max-h-[80vh] overflow-y-auto">
                         <table className="w-full text-sm text-right">
                             <thead>
                                 <tr style={{backgroundColor: 'var(--bg-color)'}}>

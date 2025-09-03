@@ -1,4 +1,3 @@
-
 import React, { memo, useState, useEffect } from 'react';
 import { Employee, KpiConfigs } from '../../types.ts';
 import { calculateKpiScore } from '../../utils/calculations.ts';
@@ -123,7 +122,9 @@ const KpiTabContent: React.FC<KpiTabContentProps> = ({ employee, period, finalSc
     };
 
     const handleSaveNote = () => {
-        saveNote(employee.id, period, note);
+        if (note !== (employee.notes?.[period] || '')) {
+            saveNote(employee.id, period, note);
+        }
     };
 
     const handleAddKpi = () => {
