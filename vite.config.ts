@@ -5,7 +5,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   define: {
-    // This makes the environment variable available to the client-side code
-    'process.env.API_KEY': JSON.stringify(process.env.API_KEY)
+    // This makes the environment variable from the deploy script available to the client-side code.
+    // Vite loads the .env file, making VITE_GEMINI_API_KEY available here.
+    // We then assign its value to process.env.API_KEY, which the app code uses.
+    'process.env.API_KEY': JSON.stringify(process.env.VITE_GEMINI_API_KEY)
   }
 });
