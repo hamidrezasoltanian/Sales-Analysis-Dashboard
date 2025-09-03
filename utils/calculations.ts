@@ -1,4 +1,3 @@
-
 import { Employee, Kpi, KpiConfigs, SalesConfig, SalesPlannerState, SalesMetrics, SalesTargets, Product, Province, EmployeeAutoTarget, AnnualTarget, MonthlyTarget, MedicalCenter } from '../types.ts';
 
 // --- Period Utilities ---
@@ -110,22 +109,66 @@ const distributeSeasonalTargetToMonths = (seasonalTargetQty: number, monthNames:
 };
 
 const calculateFullTimeBreakdown = (annualTargetQuantity: number, price: number): AnnualTarget => {
+    // Round up the total annual target first to ensure the final sum is an integer.
+    const totalCeiledQuantity = Math.ceil(annualTargetQuantity);
+
+    // If the target is zero or negative, return a zeroed-out structure.
+    if (totalCeiledQuantity <= 0) {
+        const createZeroMonths = (monthNames: string[]) => Object.fromEntries(monthNames.map(m => [m, { quantity: 0, value: 0 }]));
+        const zeroSeason = { quantity: 0, value: 0, months: {} };
+        return {
+            quantity: 0,
+            value: 0,
+            seasons: {
+                'بهار': { ...zeroSeason, months: createZeroMonths(['فروردین', 'اردیبهشت', 'خرداد']) },
+                'تابستان': { ...zeroSeason, months: createZeroMonths(['تیر', 'مرداد', 'شهریور']) },
+                'پاییز': { ...zeroSeason, months: createZeroMonths(['مهر', 'آبان', 'آذر']) },
+                'زمستان': { ...zeroSeason, months: createZeroMonths(['دی', 'بهمن', 'اسفند']) },
+            }
+        };
+    }
+
     const weights = { spring: 1, summer: 1.05, autumn: 1.10, winter: 1.25 };
     const totalWeight = Object.values(weights).reduce((sum, w) => sum + w, 0);
 
-    const springQty = (annualTargetQuantity * weights.spring) / totalWeight;
-    const summerQty = (annualTargetQuantity * weights.summer) / totalWeight;
-    const autumnQty = (annualTargetQuantity * weights.autumn) / totalWeight;
-    const winterQty = (annualTargetQuantity * weights.winter) / totalWeight;
+    // Calculate raw seasonal distribution based on the original (potentially decimal) annual target
+    const rawSeasonalQtys = {
+        'بهار': (annualTargetQuantity * weights.spring) / totalWeight,
+        'تابستان': (annualTargetQuantity * weights.summer) / totalWeight,
+        'پاییز': (annualTargetQuantity * weights.autumn) / totalWeight,
+        'زمستان': (annualTargetQuantity * weights.winter) / totalWeight,
+    };
     
+    // Use a rounding algorithm that preserves the total sum (Largest Remainder Method)
+    const flooredSeasonalQtys = Object.entries(rawSeasonalQtys).reduce((acc, [key, val]) => {
+        acc[key] = Math.floor(val);
+        return acc;
+    }, {} as { [key: string]: number });
+
+    const flooredSum = Object.values(flooredSeasonalQtys).reduce((sum, q) => sum + q, 0);
+    let remainder = totalCeiledQuantity - flooredSum;
+
+    const finalSeasonalQtys = { ...flooredSeasonalQtys };
+    // Sort by the largest decimal part to distribute the remainder fairly
+    const sortedSeasons = Object.keys(rawSeasonalQtys).sort((a, b) => (rawSeasonalQtys[b] % 1) - (rawSeasonalQtys[a] % 1));
+
+    for (const seasonName of sortedSeasons) {
+        if (remainder > 0) {
+            finalSeasonalQtys[seasonName]++;
+            remainder--;
+        }
+    }
+
+    // Now, `finalSeasonalQtys` contains integer quantities for each season that sum up to `totalCeiledQuantity`.
     const seasons = {
-        'بهار': { months: distributeSeasonalTargetToMonths(springQty, ['فروردین', 'اردیبهشت', 'خرداد'], price) },
-        'تابستان': { months: distributeSeasonalTargetToMonths(summerQty, ['تیر', 'مرداد', 'شهریور'], price) },
-        'پاییز': { months: distributeSeasonalTargetToMonths(autumnQty, ['مهر', 'آبان', 'آذر'], price) },
-        'زمستان': { months: distributeSeasonalTargetToMonths(winterQty, ['دی', 'بهمن', 'اسفند'], price) },
+        'بهار': { months: distributeSeasonalTargetToMonths(finalSeasonalQtys['بهار'], ['فروردین', 'اردیبهشت', 'خرداد'], price) },
+        'تابستان': { months: distributeSeasonalTargetToMonths(finalSeasonalQtys['تابستان'], ['تیر', 'مرداد', 'شهریور'], price) },
+        'پاییز': { months: distributeSeasonalTargetToMonths(finalSeasonalQtys['پاییز'], ['مهر', 'آبان', 'آذر'], price) },
+        'زمستان': { months: distributeSeasonalTargetToMonths(finalSeasonalQtys['زمستان'], ['دی', 'بهمن', 'اسفند'], price) },
     };
 
-    // Recalculate totals from ceiled monthly values to ensure consistency
+    // Recalculate totals from ceiled monthly values to ensure consistency.
+    // The final sum should now match `totalCeiledQuantity` without further adjustments.
     let finalAnnualQuantity = 0;
     const finalSeasons: AnnualTarget['seasons'] = {} as any;
 

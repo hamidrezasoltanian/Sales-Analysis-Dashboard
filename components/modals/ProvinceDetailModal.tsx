@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Province, Employee, Product, MarketData, MedicalCenter } from '../../types.ts';
 import Modal from '../common/Modal.tsx';
@@ -44,7 +43,7 @@ const ProvinceDetailModal: React.FC<ProvinceDetailModalProps> = ({ province, emp
                                     const productShare = province.marketShare[product.id] || 0;
                                     const provincePotentialUnits = (productShare / 100) * totalMarketSize;
                                     const targetAcquisitionRate = assignedEmployee.targetAcquisitionRate ?? 0;
-                                    const annualTargetQuantity = provincePotentialUnits * (targetAcquisitionRate / 100);
+                                    const annualTargetQuantity = Math.ceil(provincePotentialUnits * (targetAcquisitionRate / 100));
 
                                     return (
                                         <tr key={product.id} className="border-b" style={{borderColor: 'var(--border-color)'}}>
@@ -52,7 +51,7 @@ const ProvinceDetailModal: React.FC<ProvinceDetailModalProps> = ({ province, emp
                                             <td className="p-2">{formatNumber(productShare, 2)}%</td>
                                             <td className="p-2">{totalMarketSize > 0 ? formatNumber(totalMarketSize) : <span className="text-xs text-orange-500">تعریف نشده</span>}</td>
                                             <td className="p-2">{formatNumber(provincePotentialUnits, 1)}</td>
-                                            <td className="p-2 font-bold">{formatNumber(annualTargetQuantity, 1)}</td>
+                                            <td className="p-2 font-bold">{formatNumber(annualTargetQuantity, 0)}</td>
                                             <td className="p-2 text-green-600 font-semibold">{formatCurrency(annualTargetQuantity * product.price)} تومان</td>
                                         </tr>
                                     )

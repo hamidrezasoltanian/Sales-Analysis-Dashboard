@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { MedicalCenter, Product, Employee, MarketData } from '../../types.ts';
@@ -30,13 +29,13 @@ const TehranMonitorModal: React.FC<TehranMonitorModalProps> = ({ closeModal, med
             let annualTargetQuantity = 0;
             if (assignedEmployee) {
                 const targetAcquisitionRate = assignedEmployee.targetAcquisitionRate ?? 0;
-                annualTargetQuantity = centerPotentialUnits * (targetAcquisitionRate / 100);
+                annualTargetQuantity = Math.ceil(centerPotentialUnits * (targetAcquisitionRate / 100));
             }
 
             return {
                 name: center.name,
                 'پتانسیل فروش (تعداد)': parseFloat(centerPotentialUnits.toFixed(1)),
-                'تارگت سالانه (تعداد)': parseFloat(annualTargetQuantity.toFixed(1)),
+                'تارگت سالانه (تعداد)': annualTargetQuantity,
             };
         });
 
