@@ -78,6 +78,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [aiAssistantModalOpen, setAiAssistantModalOpen] = useState(false);
     const { showNotification } = useNotification();
 
+    const updateAppData = useCallback((updater: (draft: AppData) => void) => {
+        setAppData(produce(updater));
+    }, []);
+
     // Effect to load background image from IndexedDB on initial app load
     useEffect(() => {
         const loadImage = async () => {
@@ -85,26 +89,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 const imageFile = await getBackgroundImage();
                 if (imageFile) {
                     const objectURL = URL.createObjectURL(imageFile);
-                    setAppData(produce(draft => {
+                    updateAppData(draft => {
                         draft.backgroundImage = objectURL;
-                    }));
+                    });
                 }
             } catch (error) {
                 console.error("Failed to load background image from DB:", error);
             }
         };
         loadImage();
-    }, []);
+    }, [updateAppData]);
 
     // Effect to save all data EXCEPT background image to localStorage
     useEffect(() => {
         const { backgroundImage, ...dataToSave } = appData;
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
     }, [appData]);
-
-    const updateAppData = useCallback((updater: (draft: AppData) => void) => {
-        setAppData(produce(updater));
-    }, []);
     
     // All the data manipulation functions from App.tsx are memoized here
     const addYear = useCallback((year: number) => updateAppData(d => { if (!d.availableYears.includes(year)) { d.availableYears.push(year); d.availableYears.sort((a, b) => b - a); } }), [updateAppData]);
@@ -153,21 +153,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const updateSalesConfig = useCallback((newConfig: Partial<SalesConfig>) => updateAppData(d => { d.salesConfig = { ...d.salesConfig, ...newConfig }; }), [updateAppData]);
     
     const setBackgroundImage = useCallback(async (imageFile: File | null) => {
-        // The responsibility of revoking the old blob URL is now handled
-        // by the useEffect cleanup in App.tsx, which is the correct lifecycle point.
-
         if (imageFile) {
             try {
                 await saveBackgroundImage(imageFile);
-                const objectURL = URL.createObjectURL(imageFile);
-                updateAppData(d => { d.backgroundImage = objectURL; });
+                const newUrl = URL.createObjectURL(imageFile);
+                updateAppData(draft => {
+                    // Revoke the old URL *before* setting the new one to prevent memory leaks.
+                    if (draft.backgroundImage && draft.backgroundImage.startsWith('blob:')) {
+                        URL.revokeObjectURL(draft.backgroundImage);
+                    }
+                    draft.backgroundImage = newUrl;
+                });
             } catch (error) {
                 console.error("Failed to save background image:", error);
             }
         } else {
             try {
                 await deleteBackgroundImage();
-                updateAppData(d => { d.backgroundImage = null; });
+                updateAppData(draft => {
+                    // Also revoke the URL from state when deleting the image.
+                    if (draft.backgroundImage && draft.backgroundImage.startsWith('blob:')) {
+                        URL.revokeObjectURL(draft.backgroundImage);
+                    }
+                    draft.backgroundImage = null;
+                });
             } catch (error) {
                 console.error("Failed to delete background image:", error);
             }

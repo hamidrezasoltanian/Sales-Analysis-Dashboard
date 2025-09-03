@@ -91,13 +91,13 @@ const AddMedicalCenterForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }
 const QuickAddModal: React.FC<QuickAddModalProps> = ({ closeModal }) => {
     const { quickAddModalOpen } = useAppContext();
     const { showNotification } = useNotification();
-    const [activeTab, setActiveTab] = useState<'employee' | 'product' | 'medicalCenter'>('employee');
+    const [activeTab, setActiveTab] = useState<'employee' | 'product' | 'medicalCenter'>('medicalCenter');
     
     useEffect(() => {
         if (typeof quickAddModalOpen === 'string') {
             setActiveTab(quickAddModalOpen);
         } else {
-            setActiveTab('employee');
+            setActiveTab('medicalCenter');
         }
     }, [quickAddModalOpen]);
 

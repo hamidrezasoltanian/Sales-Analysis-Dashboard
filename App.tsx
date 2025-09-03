@@ -41,13 +41,8 @@ const AppContent: React.FC = () => {
             document.body.classList.remove('with-background');
         }
 
-        // Cleanup function to revoke the object URL when the component unmounts or the image changes.
-        // This is the correct place to handle this lifecycle event.
-        return () => {
-            if (currentImageUrl && currentImageUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(currentImageUrl);
-            }
-        };
+        // The cleanup logic has been moved to AppContext to be closer to the state update,
+        // resolving a timing issue that caused the image not to display correctly.
     }, [appData.backgroundImage]);
     
     const renderActiveView = () => {
