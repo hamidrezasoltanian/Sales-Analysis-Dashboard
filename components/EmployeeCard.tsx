@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, memo } from 'react';
-import { Employee, Province, EmployeeAutoTarget, MedicalCenter, Product, MarketData } from '../types.ts';
+import { Employee, Province, EmployeeAutoTarget, MedicalCenter, Product, MarketData, CardSize } from '../types.ts';
 import { calculateFinalScore } from '../utils/calculations.ts';
 import TrendModal from './modals/TrendModal.tsx';
 import { useAppContext } from '../contexts/AppContext.tsx';
@@ -14,10 +14,12 @@ interface EmployeeCardProps {
     employee: Employee;
     period: string;
     employeeAutoTarget?: EmployeeAutoTarget;
+    selectedProductForTarget?: Product;
     isReadOnly?: boolean;
     products?: Product[];
     marketData?: MarketData;
     tehranMarketData?: MarketData;
+    cardSize?: CardSize;
 }
 
 const EditEmployeeModal: React.FC<{ employee: Employee; closeModal: () => void; }> = ({ employee, closeModal }) => {
@@ -75,7 +77,7 @@ const EditEmployeeModal: React.FC<{ employee: Employee; closeModal: () => void; 
 };
 
 
-const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnly = false, employeeAutoTarget, products = [], marketData = {}, tehranMarketData = {} }) => {
+const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnly = false, employeeAutoTarget, selectedProductForTarget, products = [], marketData = {}, tehranMarketData = {}, cardSize = 'comfortable' }) => {
     const { appData: { kpiConfigs, provinces, medicalCenters }, deleteEmployee } = useAppContext();
     const finalScore = useMemo(() => calculateFinalScore(employee, period, kpiConfigs), [employee, period, kpiConfigs]);
     
@@ -83,18 +85,39 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnl
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isTargetDetailModalOpen, setTargetDetailModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'kpi' | 'targets'>('kpi');
+    
+    const cardPadding = cardSize === 'compact' ? 'p-3' : 'p-4';
+    const cardGap = cardSize === 'compact' ? 'gap-4' : 'gap-6';
+    const avatarContainerStyles = cardSize === 'compact' ? 'md:w-1/4' : 'md:w-1/3';
+    const contentContainerStyles = cardSize === 'compact' ? 'md:w-3/4' : 'md:w-2/3';
+
+    const avatarSize = cardSize === 'compact' ? 'h-8 w-8' : 'h-10 w-10';
+    const nameSize = cardSize === 'compact' ? 'text-lg' : 'text-xl';
+    const titleSize = cardSize === 'compact' ? 'text-xs' : 'text-sm';
+    const buttonMargin = cardSize === 'compact' ? 'mt-2' : 'mt-4';
 
     return (
-        <div className="card p-4 rounded-xl border flex flex-col md:flex-row gap-6">
-            <div className="md:w-1/3 flex flex-col items-center text-center">
-                 <div className="relative mb-3">
-                     <svg className="h-10 w-10 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
+        <div className={`card ${cardPadding} rounded-xl border flex flex-col md:flex-row ${cardGap}`}>
+            <div className={`${avatarContainerStyles} flex flex-col items-center text-center`}>
+                 <div className="relative mb-2">
+                     <svg className={`${avatarSize} text-gray-300`} fill="currentColor" viewBox="0 0 24 24">
                         <path d="M24 20.993V24H0v-2.997A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
                  </div>
-                 <h3 className="text-xl font-bold">{employee.name}</h3>
-                 <p className="text-sm text-secondary">{employee.department} / {employee.title}</p>
-                 <div className="flex items-center gap-2 mt-4">
+                 <h3 className={`${nameSize} font-bold`}>{employee.name}</h3>
+                 <p className={`${titleSize} text-secondary`}>{employee.department} / {employee.title}</p>
+                 
+                 {employeeAutoTarget && selectedProductForTarget && employeeAutoTarget.annual.quantity > 0 && (
+                    <div className={`text-xs p-2 rounded-lg mt-2 w-full text-right`} style={{backgroundColor: 'var(--bg-color)'}}>
+                        <p className="font-semibold text-secondary">هدف سالانه ({selectedProductForTarget.name}):</p>
+                        <div className="flex justify-between items-center mt-1">
+                           <span className="font-bold">{employeeAutoTarget.annual.quantity.toLocaleString('fa-IR')} عدد</span>
+                           <span className="font-bold text-green-600">{employeeAutoTarget.annual.value.toLocaleString('fa-IR')} تومان</span>
+                        </div>
+                    </div>
+                )}
+
+                 <div className={`flex items-center gap-2 ${buttonMargin}`}>
                     <Tooltip text="نمایش روند">
                         <button onClick={() => setTrendModalOpen(true)} className="p-2 rounded-full hover:bg-blue-100 text-gray-500 hover:text-blue-600 transition">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
@@ -117,7 +140,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnl
                     </Tooltip>
                  </div>
             </div>
-            <div className="md:w-2/3">
+            <div className={contentContainerStyles}>
                 <div className="flex items-center gap-2 border-b pb-2 mb-3" style={{borderColor: 'var(--border-color)'}}>
                     <button onClick={() => setActiveTab('kpi')} className={`tab-button-internal ${activeTab === 'kpi' ? 'active' : ''}`}>KPI‌ها</button>
                     <button onClick={() => setActiveTab('targets')} className={`tab-button-internal ${activeTab === 'targets' ? 'active' : ''}`}>اهداف فروش و مناطق</button>
@@ -130,6 +153,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnl
                         finalScore={finalScore} 
                         kpiConfigs={kpiConfigs}
                         isReadOnly={isReadOnly}
+                        cardSize={cardSize}
                     />
                 )}
 
@@ -143,6 +167,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnl
                         products={products}
                         marketData={marketData}
                         tehranMarketData={tehranMarketData}
+                        cardSize={cardSize}
                     />
                 )}
             </div>

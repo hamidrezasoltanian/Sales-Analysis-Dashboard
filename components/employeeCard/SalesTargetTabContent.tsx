@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, memo } from 'react';
-import { Employee, EmployeeAutoTarget, MedicalCenter, Province, Product, MarketData } from '../../types.ts';
+import { Employee, EmployeeAutoTarget, MedicalCenter, Province, Product, MarketData, CardSize } from '../../types.ts';
 import { printEmployeeTargets } from '../../utils/dataHandlers.ts';
 import { useAppContext } from '../../contexts/AppContext.tsx';
 import ProvinceDetailModal from '../modals/ProvinceDetailModal.tsx';
@@ -14,10 +14,11 @@ interface SalesTargetTabContentProps {
     products: Product[];
     marketData: MarketData;
     tehranMarketData: MarketData;
+    cardSize?: CardSize;
 }
 
 const SalesTargetTabContent: React.FC<SalesTargetTabContentProps> = ({ 
-    employee, period, employeeAutoTarget, provinces, medicalCenters, products, marketData, tehranMarketData
+    employee, period, employeeAutoTarget, provinces, medicalCenters, products, marketData, tehranMarketData, cardSize = 'comfortable'
 }) => {
     const { appData: { employees } } = useAppContext();
     const [selectedTerritory, setSelectedTerritory] = useState<Province | MedicalCenter | null>(null);
@@ -37,9 +38,11 @@ const SalesTargetTabContent: React.FC<SalesTargetTabContentProps> = ({
     
     const territoryMarketData = selectedTerritory ? 
         (selectedTerritory.id.startsWith('mc_') ? tehranMarketData : marketData) : {};
+        
+    const textSize = cardSize === 'compact' ? 'text-xs' : 'text-sm';
 
     return (
-        <div className="text-sm">
+        <div className={textSize}>
             <h4 className="font-bold mb-2">خلاصه اهداف فروش سال {analysisYear}</h4>
             {employeeAutoTarget && employeeAutoTarget.annual.value > 0 ? (
                 <div className="space-y-3">

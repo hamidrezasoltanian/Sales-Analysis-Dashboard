@@ -8,8 +8,8 @@ import { useAppContext } from '../contexts/AppContext.tsx';
 import StatCard from './StatCard.tsx';
 
 const KpiDashboardView: React.FC = () => {
-    const { appData, addYear, setQuickAddModalOpen } = useAppContext();
-    const { employees, kpiConfigs, availableYears, provinces, medicalCenters, products, marketData, tehranMarketData } = appData;
+    const { appData, addYear, setQuickAddModalOpen, setCardSize } = useAppContext();
+    const { employees, kpiConfigs, availableYears, provinces, medicalCenters, products, marketData, tehranMarketData, cardSize } = appData;
 
     const [year, setYear] = useState(availableYears[0]);
     const [season, setSeason] = useState<'بهار' | 'تابستان' | 'پاییز' | 'زمستان'>('بهار');
@@ -17,10 +17,12 @@ const KpiDashboardView: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sort, setSort] = useState('default');
     const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id.toString() || '');
-
+    const [department, setDepartment] = useState('all');
 
     const period = `${month} ${year}`;
     const monthsForSeason = {'بهار':['فروردین','اردیبهشت','خرداد'],'تابستان':['تیر','مرداد','شهریور'],'پاییز':['مهر','آبان','آذر'],'زمستان':['دی','بهمن','اسفند']};
+    
+    const departments = useMemo(() => ['all', ...Array.from(new Set(employees.map(e => e.department)))], [employees]);
 
     useEffect(() => {
         if (!availableYears.includes(year) && availableYears.length > 0) {
@@ -50,8 +52,12 @@ const KpiDashboardView: React.FC = () => {
     };
     
 
-    const { filteredAndSortedEmployees, teamStats, trendData, autoTargetsByEmployee } = useMemo(() => {
-        const scores = employees.map(emp => ({emp, score: calculateFinalScore(emp, period, kpiConfigs)}));
+    const { filteredAndSortedEmployees, teamStats, trendData, autoTargetsByEmployee, selectedProduct } = useMemo(() => {
+        const departmentFilteredEmployees = department === 'all'
+            ? employees
+            : employees.filter(e => e.department === department);
+
+        const scores = departmentFilteredEmployees.map(emp => ({emp, score: calculateFinalScore(emp, period, kpiConfigs)}));
         const filtered = scores.filter(({emp}) => emp.name.toLowerCase().includes(searchTerm.toLowerCase()));
         
         filtered.sort((a, b) => {
@@ -67,22 +73,22 @@ const KpiDashboardView: React.FC = () => {
         const allScores = scores.map(s => s.score);
         const averageScore = allScores.length > 0 ? allScores.reduce((a, b) => a + b, 0) / allScores.length : 0;
         
-        const getTrend = (thresholdFn: (s: number) => boolean) => {
+        const getTrend = (thresholdFn: (s: number) => boolean, employeeSet: Employee[]) => {
             const trend: number[] = [];
             let currentPeriod = period;
             for (let i = 0; i < 6; i++) {
-                const periodScores = employees.map(emp => calculateFinalScore(emp, currentPeriod, kpiConfigs));
+                const periodScores = employeeSet.map(emp => calculateFinalScore(emp, currentPeriod, kpiConfigs));
                 trend.unshift(periodScores.filter(thresholdFn).length);
                 currentPeriod = getPreviousPeriod(currentPeriod);
             }
             return trend;
         };
         
-        const getAverageTrend = () => {
+        const getAverageTrend = (employeeSet: Employee[]) => {
              const trend: number[] = [];
              let currentPeriod = period;
              for (let i = 0; i < 6; i++) {
-                 const periodScores = employees.map(emp => calculateFinalScore(emp, currentPeriod, kpiConfigs));
+                 const periodScores = employeeSet.map(emp => calculateFinalScore(emp, currentPeriod, kpiConfigs));
                  const avg = periodScores.length > 0 ? periodScores.reduce((a, b) => a + b, 0) / periodScores.length : 0;
                  trend.unshift(avg);
                  currentPeriod = getPreviousPeriod(currentPeriod);
@@ -90,39 +96,45 @@ const KpiDashboardView: React.FC = () => {
              return trend;
         };
 
-        const selectedProduct = products.find(p => p.id === parseInt(selectedProductId));
+        const currentSelectedProduct = products.find(p => p.id === parseInt(selectedProductId));
         const nationalMarketSize = marketData[selectedProductId]?.[year] || 0;
         const tehranMarketSize = tehranMarketData[selectedProductId]?.[year] || 0;
 
-        const autoTargets = calculateAutoTargets(employees, provinces, medicalCenters, selectedProduct, nationalMarketSize, tehranMarketSize);
+        // Auto-targets should be calculated for all employees regardless of department filter,
+        // so the card can show data even if the employee is filtered out by department.
+        const autoTargets = calculateAutoTargets(employees, provinces, medicalCenters, currentSelectedProduct, nationalMarketSize, tehranMarketSize);
         const autoTargetsMap = new Map(autoTargets.map(t => [t.employeeId, t]));
+        
+        const teamTitle = department === 'all' ? 'کل تیم' : `تیم ${department}`;
 
         return {
             filteredAndSortedEmployees: filtered.map(({emp}) => emp),
             teamStats: {
+                title: teamTitle,
                 average: averageScore.toLocaleString('fa-IR', { maximumFractionDigits: 1 }),
                 high: allScores.filter(s => s >= HIGH_PERFORMANCE_THRESHOLD).length.toLocaleString('fa-IR'),
                 low: allScores.filter(s => s < LOW_PERFORMANCE_THRESHOLD).length.toLocaleString('fa-IR'),
             },
             trendData: {
-                average: getAverageTrend(),
-                high: getTrend(s => s >= HIGH_PERFORMANCE_THRESHOLD),
-                low: getTrend(s => s < LOW_PERFORMANCE_THRESHOLD),
+                average: getAverageTrend(departmentFilteredEmployees),
+                high: getTrend(s => s >= HIGH_PERFORMANCE_THRESHOLD, departmentFilteredEmployees),
+                low: getTrend(s => s < LOW_PERFORMANCE_THRESHOLD, departmentFilteredEmployees),
             },
             autoTargetsByEmployee: autoTargetsMap,
+            selectedProduct: currentSelectedProduct,
         };
-    }, [employees, searchTerm, sort, period, kpiConfigs, selectedProductId, year, products, marketData, tehranMarketData, provinces, medicalCenters]);
+    }, [employees, searchTerm, sort, period, kpiConfigs, selectedProductId, year, products, marketData, tehranMarketData, provinces, medicalCenters, department]);
 
     return (
         <div className="animate-subtle-appear">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <StatCard title="میانگین امتیاز تیم" value={teamStats.average} colorClass="bg-blue-100 text-blue-600" trendData={trendData.average} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} />
+                <StatCard title={`میانگین امتیاز ${teamStats.title}`} value={teamStats.average} colorClass="bg-blue-100 text-blue-600" trendData={trendData.average} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} />
                 <StatCard title="عملکرد عالی" value={`${teamStats.high} نفر`} colorClass="bg-green-100 text-green-600" trendData={trendData.high} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>} />
                 <StatCard title="نیاز به بهبود" value={`${teamStats.low} نفر`} colorClass="bg-red-100 text-red-600" trendData={trendData.low} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>} />
             </div>
 
              <div className="card border rounded-lg p-4 mb-6">
-                 <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
                     <div className="flex items-center gap-2 flex-wrap">
                         <label className="text-sm font-medium">دوره:</label>
                         <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="p-2 border rounded-lg bg-gray-50 text-gray-700">
@@ -136,22 +148,34 @@ const KpiDashboardView: React.FC = () => {
                             {monthsForSeason[season].map(m => <option key={m} value={m}>{m}</option>)}
                         </select>
                     </div>
-                     <div className="flex items-center gap-2 flex-wrap">
-                         <label className="text-sm font-medium">محصول برای تحلیل هدف:</label>
+                     <div className="flex items-center gap-2 flex-wrap xl:justify-center">
+                         <label className="text-sm font-medium">تحلیل هدف:</label>
                           <select value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)} className="p-2 border rounded-lg bg-gray-50 text-gray-700 min-w-[150px]">
                             {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                     </div>
+                     <div className="flex items-center gap-2 flex-wrap xl:justify-end">
+                        <label className="text-sm font-medium">فیلتر:</label>
+                        <select value={department} onChange={e => setDepartment(e.target.value)} className="p-2 border rounded-lg bg-gray-50 text-gray-700 min-w-[150px]">
+                            {departments.map(d => <option key={d} value={d}>{d === 'all' ? 'همه دپارتمان‌ها' : d}</option>)}
                         </select>
                      </div>
                  </div>
                  <div className="flex flex-col md:flex-row gap-4 mt-4">
                     <input type="text" placeholder="جستجوی کارمند..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full md:w-1/2 p-2 border rounded-lg bg-gray-50 text-gray-700" />
-                    <select value={sort} onChange={e => setSort(e.target.value)} className="w-full md:w-1/2 p-2 border rounded-lg bg-gray-50 text-gray-700">
-                        <option value="default">مرتب‌سازی پیش‌فرض</option>
-                        <option value="name_asc">نام (صعودی)</option>
-                        <option value="name_desc">نام (نزولی)</option>
-                        <option value="score_asc">امتیاز (صعودی)</option>
-                        <option value="score_desc">امتیاز (نزولی)</option>
-                    </select>
+                    <div className="w-full md:w-1/2 flex items-center gap-2">
+                        <select value={sort} onChange={e => setSort(e.target.value)} className="flex-grow p-2 border rounded-lg bg-gray-50 text-gray-700">
+                            <option value="default">مرتب‌سازی پیش‌فرض</option>
+                            <option value="name_asc">نام (صعودی)</option>
+                            <option value="name_desc">نام (نزولی)</option>
+                            <option value="score_asc">امتیاز (صعودی)</option>
+                            <option value="score_desc">امتیاز (نزولی)</option>
+                        </select>
+                        <div className="flex items-center justify-center gap-1 p-1 rounded-lg flex-shrink-0" style={{backgroundColor: 'var(--bg-color)'}}>
+                            <button onClick={() => setCardSize('comfortable')} className={`px-3 py-1 text-sm rounded-md transition ${cardSize === 'comfortable' ? 'shadow' : ''}`} style={cardSize === 'comfortable' ? {backgroundColor: 'var(--card-bg)'} : {}}>راحت</button>
+                            <button onClick={() => setCardSize('compact')} className={`px-3 py-1 text-sm rounded-md transition ${cardSize === 'compact' ? 'shadow' : ''}`} style={cardSize === 'compact' ? {backgroundColor: 'var(--card-bg)'} : {}}>فشرده</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -162,9 +186,11 @@ const KpiDashboardView: React.FC = () => {
                         period={period} 
                         isReadOnly={true}
                         employeeAutoTarget={autoTargetsByEmployee.get(emp.id)}
+                        selectedProductForTarget={selectedProduct}
                         products={products}
                         marketData={marketData}
                         tehranMarketData={tehranMarketData}
+                        cardSize={cardSize}
                          /></div>
                 })}
             </div>

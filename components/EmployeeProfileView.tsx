@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { AppData, Employee, EmployeeAutoTarget } from '../types.ts';
+import { AppData, Employee, EmployeeAutoTarget, Product } from '../types.ts';
 import { useAppContext } from '../contexts/AppContext.tsx';
 import EmptyState from './common/EmptyState.tsx';
 import EmployeeCard from './EmployeeCard.tsx';
@@ -8,7 +8,7 @@ import { calculateAutoTargets } from '../utils/calculations.ts';
 
 const EmployeeProfileView: React.FC = () => {
     const { appData, setQuickAddModalOpen, addYear } = useAppContext();
-    const { employees, availableYears, products, marketData, tehranMarketData, provinces, medicalCenters } = appData;
+    const { employees, availableYears, products, marketData, tehranMarketData, provinces, medicalCenters, cardSize } = appData;
 
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employees[0]?.id.toString() || '');
     const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id.toString() || '');
@@ -52,19 +52,20 @@ const EmployeeProfileView: React.FC = () => {
         }
     };
 
-    const { selectedEmployee, employeeAutoTarget } = useMemo(() => {
+    const { selectedEmployee, employeeAutoTarget, selectedProduct } = useMemo(() => {
         const employee = employees.find(emp => emp.id.toString() === selectedEmployeeId);
-        if (!employee) return { selectedEmployee: undefined, employeeAutoTarget: undefined };
+        if (!employee) return { selectedEmployee: undefined, employeeAutoTarget: undefined, selectedProduct: undefined };
 
-        const selectedProduct = products.find(p => p.id === parseInt(selectedProductId));
+        const currentSelectedProduct = products.find(p => p.id === parseInt(selectedProductId));
         const nationalMarketSize = marketData[selectedProductId]?.[year] || 0;
         const tehranMarketSize = tehranMarketData[selectedProductId]?.[year] || 0;
 
-        const autoTargets = calculateAutoTargets([employee], provinces, medicalCenters, selectedProduct, nationalMarketSize, tehranMarketSize);
+        const autoTargets = calculateAutoTargets([employee], provinces, medicalCenters, currentSelectedProduct, nationalMarketSize, tehranMarketSize);
         
         return {
             selectedEmployee: employee,
-            employeeAutoTarget: autoTargets.length > 0 ? autoTargets[0] : undefined
+            employeeAutoTarget: autoTargets.length > 0 ? autoTargets[0] : undefined,
+            selectedProduct: currentSelectedProduct
         };
     }, [selectedEmployeeId, selectedProductId, year, employees, products, marketData, tehranMarketData, provinces, medicalCenters]);
     
@@ -119,9 +120,11 @@ const EmployeeProfileView: React.FC = () => {
                         employee={selectedEmployee} 
                         period={period}
                         employeeAutoTarget={employeeAutoTarget}
+                        selectedProductForTarget={selectedProduct}
                         products={products}
                         marketData={marketData}
                         tehranMarketData={tehranMarketData}
+                        cardSize={cardSize}
                      />
                  </div>
             ) : (

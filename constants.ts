@@ -1,10 +1,10 @@
-
 import { AppData, Province } from './types.ts';
 
 export const BACKUP_VERSION = 1;
 export const LOCAL_STORAGE_KEY = 'unifiedDashboardData_v3_react';
 export const HIGH_PERFORMANCE_THRESHOLD = 80;
 export const LOW_PERFORMANCE_THRESHOLD = 50;
+export const PERSIAN_MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
 
 export const INITIAL_PROVINCES: Province[] = [
     { id: "KR", name: "خراسان رضوی", marketShare: { "1": 9.64 }, assignedTo: null },
@@ -84,4 +84,5 @@ export const INITIAL_APP_DATA: AppData = {
     marketData: {},
     tehranMarketData: {},
     backgroundImage: null,
+    cardSize: 'comfortable',
 };

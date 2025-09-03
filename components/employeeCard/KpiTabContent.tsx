@@ -1,5 +1,6 @@
+
 import React, { memo, useState, useEffect } from 'react';
-import { Employee, KpiConfigs } from '../../types.ts';
+import { Employee, KpiConfigs, CardSize } from '../../types.ts';
 import { calculateKpiScore } from '../../utils/calculations.ts';
 import { printEmployeeReport } from '../../utils/dataHandlers.ts';
 import { useAppContext } from '../../contexts/AppContext.tsx';
@@ -17,9 +18,10 @@ interface KpiItemProps {
     config: KpiConfigs[string];
     kpiScore: number;
     isReadOnly?: boolean;
+    cardSize?: CardSize;
 }
 
-const KpiItem: React.FC<KpiItemProps> = ({ kpi, employeeId, period, config, kpiScore, isReadOnly = false }) => {
+const KpiItem: React.FC<KpiItemProps> = ({ kpi, employeeId, period, config, kpiScore, isReadOnly = false, cardSize = 'comfortable' }) => {
     const { recordScore, updateKpiTarget } = useAppContext();
 
     const handleScoreSave = (value: string) => {
@@ -33,9 +35,12 @@ const KpiItem: React.FC<KpiItemProps> = ({ kpi, employeeId, period, config, kpiS
     const numberFormatter = (val: any) => (val === null || val === undefined || val === '') ? '-' : Number(val).toLocaleString('fa-IR');
 
     const targetIsEditable = config.formula !== 'direct_penalty';
+    
+    const kpiItemPadding = cardSize === 'compact' ? 'py-1' : 'py-2';
+    const kpiTextSize = cardSize === 'compact' ? 'text-xs' : 'text-sm';
 
     return (
-        <div className="grid grid-cols-12 gap-2 items-center text-sm py-2 border-b last:border-b-0" style={{ borderColor: 'var(--border-color)' }}>
+        <div className={`grid grid-cols-12 gap-2 items-center ${kpiTextSize} ${kpiItemPadding} border-b last:border-b-0`} style={{ borderColor: 'var(--border-color)' }}>
             <div className="col-span-5 truncate font-medium flex items-center gap-1" title={config.name}>
                 <span>{config.name}</span>
                 {targetIsEditable ? (
@@ -80,9 +85,10 @@ interface KpiTabContentProps {
     finalScore: number;
     kpiConfigs: KpiConfigs;
     isReadOnly?: boolean;
+    cardSize?: CardSize;
 }
 
-const KpiTabContent: React.FC<KpiTabContentProps> = ({ employee, period, finalScore, kpiConfigs, isReadOnly = false }) => {
+const KpiTabContent: React.FC<KpiTabContentProps> = ({ employee, period, finalScore, kpiConfigs, isReadOnly = false, cardSize = 'comfortable' }) => {
     const { saveNote, addKpiToEmployee } = useAppContext();
     const { showNotification } = useNotification();
     const [note, setNote] = useState(employee.notes?.[period] || '');
@@ -91,6 +97,8 @@ const KpiTabContent: React.FC<KpiTabContentProps> = ({ employee, period, finalSc
     // State for the new KPI form
     const [newKpiType, setNewKpiType] = useState<string>('');
     const [newKpiTarget, setNewKpiTarget] = useState<string>('');
+    
+    const progressSize = cardSize === 'compact' ? 80 : 100;
 
     useEffect(() => {
         // Update local note state when props change
@@ -157,9 +165,9 @@ const KpiTabContent: React.FC<KpiTabContentProps> = ({ employee, period, finalSc
         : "سرویس هوش مصنوعی در دسترس نیست (کلید API تنظیم نشده)";
     
     return (
-        <div className="flex flex-col md:flex-row gap-6">
+        <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-shrink-0 flex flex-col items-center">
-                <RadialProgress score={finalScore} />
+                <RadialProgress score={finalScore} size={progressSize} />
                 <Tooltip text="چاپ گزارش KPI">
                     <button onClick={() => printEmployeeReport(employee, period, kpiConfigs)} className="mt-3 p-2 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -174,7 +182,7 @@ const KpiTabContent: React.FC<KpiTabContentProps> = ({ employee, period, finalSc
                         const config = kpiConfigs[kpi.type];
                         if (!config) return null;
                         const kpiScore = calculateKpiScore(kpi, period, employee.kpis, kpiConfigs);
-                        return <KpiItem key={kpi.id} kpi={kpi} employeeId={employee.id} period={period} config={config} kpiScore={kpiScore} isReadOnly={isReadOnly} />;
+                        return <KpiItem key={kpi.id} kpi={kpi} employeeId={employee.id} period={period} config={config} kpiScore={kpiScore} isReadOnly={isReadOnly} cardSize={cardSize} />;
                     }) : <p className="text-xs text-center py-2 text-secondary">هیچ KPI تعریف نشده است.</p>}
                 </div>
 

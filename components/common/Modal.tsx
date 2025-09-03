@@ -1,3 +1,4 @@
+
 import React, { ReactNode } from 'react';
 
 interface ModalProps {
@@ -21,7 +22,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, size = '2xl' }
 
     return (
         <div 
-            className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-start overflow-y-auto z-50 transition-opacity duration-300 pt-16 pb-8"
+            className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex justify-center items-start overflow-y-auto z-50 transition-opacity duration-300 pt-16 pb-8"
             onClick={onClose}
         >
             <div 

@@ -99,6 +99,8 @@ export interface MarketData {
     };
 }
 
+export type CardSize = 'compact' | 'comfortable';
+
 export interface AppData {
     backup_version?: number;
     employees: Employee[];
@@ -113,6 +115,7 @@ export interface AppData {
     tehranMarketData: MarketData; // New field for Tehran-specific market data
     availableYears: number[];
     backgroundImage: string | null;
+    cardSize: CardSize;
 }
 
 export enum View {

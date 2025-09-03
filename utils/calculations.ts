@@ -1,8 +1,7 @@
 import { Employee, Kpi, KpiConfigs, SalesConfig, SalesPlannerState, SalesMetrics, SalesTargets, Product, Province, EmployeeAutoTarget, AnnualTarget, MonthlyTarget, MedicalCenter } from '../types.ts';
+import { PERSIAN_MONTHS } from '../constants.ts';
 
 // --- Period Utilities ---
-const PERSIAN_MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
-
 export const getPreviousPeriod = (period: string): string => {
     const parts = period.split(' ');
     const month = parts[0];
