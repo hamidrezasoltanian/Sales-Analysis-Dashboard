@@ -13,6 +13,7 @@ interface EmployeeCardProps {
     employee: Employee;
     period: string;
     employeeAutoTarget?: EmployeeAutoTarget;
+    isReadOnly?: boolean;
 }
 
 const EditEmployeeModal: React.FC<{ employee: Employee; closeModal: () => void; }> = ({ employee, closeModal }) => {
@@ -70,7 +71,7 @@ const EditEmployeeModal: React.FC<{ employee: Employee; closeModal: () => void; 
 };
 
 
-const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period }) => {
+const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnly = false }) => {
     const { appData: { kpiConfigs, provinces, medicalCenters }, deleteEmployee } = useAppContext();
     const finalScore = useMemo(() => calculateFinalScore(employee, period, kpiConfigs), [employee, period, kpiConfigs]);
     
@@ -117,7 +118,8 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period }) => {
                         employee={employee} 
                         period={period} 
                         finalScore={finalScore} 
-                        kpiConfigs={kpiConfigs} 
+                        kpiConfigs={kpiConfigs}
+                        isReadOnly={isReadOnly}
                     />
                 )}
 

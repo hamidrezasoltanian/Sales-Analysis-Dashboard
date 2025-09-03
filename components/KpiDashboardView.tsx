@@ -134,7 +134,7 @@ const KpiDashboardView: React.FC = () => {
 
             <div className="space-y-6">
                 {filteredAndSortedEmployees.map((emp, index) => {
-                    return <div key={emp.id} className="animate-subtle-appear" style={{ animationDelay: `${index * 50}ms`}}><EmployeeCard employee={emp} period={period} /></div>
+                    return <div key={emp.id} className="animate-subtle-appear" style={{ animationDelay: `${index * 50}ms`}}><EmployeeCard employee={emp} period={period} isReadOnly={true} /></div>
                 })}
             </div>
         </div>

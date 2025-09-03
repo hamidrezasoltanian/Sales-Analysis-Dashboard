@@ -48,6 +48,7 @@ interface AppContextType {
     deleteEmployee: (id: number) => void;
     addKpiToEmployee: (employeeId: number, type: string, target?: number) => void;
     recordScore: (employeeId: number, kpiId: number, period: string, value: number | null) => void;
+    updateKpiTarget: (employeeId: number, kpiId: number, target: number | null) => void;
     saveNote: (employeeId: number, period: string, note: string) => void;
     saveProduct: (product: Product) => void;
     deleteProduct: (productId: number) => void;
@@ -113,6 +114,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const deleteEmployee = useCallback((id: number) => updateAppData(d => { d.employees = d.employees.filter(e => e.id !== id); d.provinces.forEach(p => { if (p.assignedTo === id) p.assignedTo = null; }); d.medicalCenters.forEach(c => { if (c.assignedTo === id) c.assignedTo = null; }); }), [updateAppData]);
     const addKpiToEmployee = useCallback((employeeId: number, type: string, target?: number) => updateAppData(d => { const e = d.employees.find(emp => emp.id === employeeId); if (e) { const k: Kpi = { id: Date.now(), type, scores: {} }; if (target !== undefined) k.target = target; e.kpis.push(k); } }), [updateAppData]);
     const recordScore = useCallback((employeeId: number, kpiId: number, period: string, value: number | null) => updateAppData(d => { const k = d.employees.find(e => e.id === employeeId)?.kpis.find(kpi => kpi.id === kpiId); if (k) { if (value === null || isNaN(value)) delete k.scores[period]; else k.scores[period] = value; } }), [updateAppData]);
+    const updateKpiTarget = useCallback((employeeId: number, kpiId: number, target: number | null) => {
+        updateAppData(d => {
+            const employee = d.employees.find(e => e.id === employeeId);
+            if (employee) {
+                const kpi = employee.kpis.find(k => k.id === kpiId);
+                if (kpi) {
+                    if (target === null || isNaN(target) || target < 0) {
+                        delete kpi.target;
+                    } else {
+                        kpi.target = target;
+                    }
+                }
+            }
+        });
+    }, [updateAppData]);
     const saveNote = useCallback((employeeId: number, period: string, note: string) => updateAppData(d => { const e = d.employees.find(emp => emp.id === employeeId); if (e) { if (note.trim()) e.notes[period] = note; else delete e.notes[period]; } }), [updateAppData]);
     const saveProduct = useCallback((product: Product) => updateAppData(d => { const i = d.products.findIndex(p => p.id === product.id); if (i > -1) d.products[i] = product; else d.products.push({ ...product, id: Date.now() }); }), [updateAppData]);
     const deleteProduct = useCallback((productId: number) => updateAppData(d => { d.products = d.products.filter(p => p.id !== productId); }), [updateAppData]);
@@ -216,7 +232,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         deleteMedicalCenter, saveMedicalCenters, updateMedicalCenterAssignment, addMedicalCentersBatch, updateMarketData,
         updateTehranMarketData,
         saveSalesTargetData, updateSalesPlannerState, updateSalesConfig, setBackgroundImage,
-        saveKpiConfig, deleteKpiConfig, restoreData, addYear,
+        saveKpiConfig, deleteKpiConfig, restoreData, addYear, updateKpiTarget,
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

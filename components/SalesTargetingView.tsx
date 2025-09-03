@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Employee, Product, SalesTargets } from '../types.ts';
 import { getPreviousPeriod } from '../utils/calculations.ts';
+import InlineEdit from './common/InlineEdit.tsx';
 
 interface SalesTargetingViewProps {
     employees: Employee[];
@@ -28,6 +29,7 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
     };
     
     const formatCurrency = (value: number) => !isFinite(value) ? '۰' : Math.round(value).toLocaleString('fa-IR');
+    const numberFormatter = (val: any) => (val === null || val === undefined || val === '') ? '-' : Number(val).toLocaleString('fa-IR');
 
     const calculatedData = useMemo(() => {
         const employeeId = parseInt(selectedEmployeeId);
@@ -113,10 +115,20 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
                                     <td className="p-3 font-semibold">{item.name}<br/><small className="font-normal text-secondary">{formatCurrency(item.price)} تومان</small></td>
                                     <td className="p-3 text-orange-600">{item.carryOver.toLocaleString('fa-IR')}</td>
                                     <td className="p-3 w-32">
-                                        <input type="number" defaultValue={item.target || ''} onBlur={e => handleSave(item.id, 'target', e.target.value)} placeholder="تعداد" className="w-full p-1 border rounded-md text-center bg-gray-50 text-gray-700" />
+                                        <InlineEdit
+                                            value={item.target || null}
+                                            onSave={(value) => handleSave(item.id, 'target', value)}
+                                            placeholder="تعداد"
+                                            formatter={numberFormatter}
+                                        />
                                     </td>
                                     <td className="p-3 w-32">
-                                        <input type="number" defaultValue={item.actual || ''} onBlur={e => handleSave(item.id, 'actual', e.target.value)} placeholder="تعداد" className="w-full p-1 border rounded-md text-center bg-gray-50 text-gray-700" />
+                                         <InlineEdit
+                                            value={item.actual || null}
+                                            onSave={(value) => handleSave(item.id, 'actual', value)}
+                                            placeholder="تعداد"
+                                            formatter={numberFormatter}
+                                        />
                                     </td>
                                     <td className="p-3 font-bold">{item.totalTarget.toLocaleString('fa-IR')}</td>
                                     <td className="p-3">

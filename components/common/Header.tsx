@@ -10,7 +10,7 @@ const VIEW_TITLES: Record<View, { title: string; description: string }> = {
     [View.SalesTargeting]: { title: 'هدف‌گذاری فروش', description: 'تعیین اهداف فروش به صورت خودکار یا دستی' },
     [View.Management]: { title: 'مدیریت استان‌ها', description: 'مدیریت محصولات، استان‌ها و تخصیص فروش' },
     [View.TehranManagement]: { title: 'مدیریت تهران', description: 'مدیریت مراکز درمانی، تخصیص فروش و سهم بازار' },
-    [View.EmployeeProfile]: { title: 'بررسی کارمندان', description: 'نمای ۳۶۰ درجه از عملکرد، وظایف و تاریخچه هر کارمند' },
+    [View.EmployeeProfile]: { title: 'مدیریت عملکرد', description: 'ثبت امتیازات KPI، افزودن KPI جدید و یادداشت‌گذاری برای کارمندان' },
     [View.Settings]: { title: 'ابزارها و تنظیمات', description: 'ابزارهای کمکی و تنظیمات پیشرفته سیستم' },
 };
 
