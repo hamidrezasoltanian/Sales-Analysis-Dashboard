@@ -13,13 +13,13 @@ import EmployeeTargetDetailModal from './modals/EmployeeTargetDetailModal.tsx';
 interface EmployeeCardProps {
     employee: Employee;
     period: string;
-    employeeAutoTarget?: EmployeeAutoTarget;
-    selectedProductForTarget?: Product;
     isReadOnly?: boolean;
     products?: Product[];
     marketData?: MarketData;
     tehranMarketData?: MarketData;
     cardSize?: CardSize;
+    aggregatedAnnualTarget?: { quantity: number; value: number; productCount: number; productNames: string[] };
+    employeeAutoTargetForModal?: EmployeeAutoTarget;
 }
 
 const EditEmployeeModal: React.FC<{ employee: Employee; closeModal: () => void; }> = ({ employee, closeModal }) => {
@@ -77,7 +77,7 @@ const EditEmployeeModal: React.FC<{ employee: Employee; closeModal: () => void; 
 };
 
 
-const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnly = false, employeeAutoTarget, selectedProductForTarget, products = [], marketData = {}, tehranMarketData = {}, cardSize = 'comfortable' }) => {
+const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnly = false, aggregatedAnnualTarget, employeeAutoTargetForModal, products = [], marketData = {}, tehranMarketData = {}, cardSize = 'comfortable' }) => {
     const { appData: { kpiConfigs, provinces, medicalCenters }, deleteEmployee } = useAppContext();
     const finalScore = useMemo(() => calculateFinalScore(employee, period, kpiConfigs), [employee, period, kpiConfigs]);
     
@@ -107,12 +107,19 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnl
                  <h3 className={`${nameSize} font-bold`}>{employee.name}</h3>
                  <p className={`${titleSize} text-secondary`}>{employee.department} / {employee.title}</p>
                  
-                 {employeeAutoTarget && selectedProductForTarget && employeeAutoTarget.annual.quantity > 0 && (
+                 {aggregatedAnnualTarget && aggregatedAnnualTarget.quantity > 0 && (
                     <div className={`text-xs p-2 rounded-lg mt-2 w-full text-right`} style={{backgroundColor: 'var(--bg-color)'}}>
-                        <p className="font-semibold text-secondary">هدف سالانه ({selectedProductForTarget.name}):</p>
+                        <Tooltip text={aggregatedAnnualTarget.productNames.join('، ')}>
+                            <p className="font-semibold text-secondary cursor-default">
+                                {aggregatedAnnualTarget.productCount > 1 
+                                    ? `مجموع اهداف (${aggregatedAnnualTarget.productCount} محصول):`
+                                    : `هدف سالانه (${aggregatedAnnualTarget.productNames[0] || ''}):`
+                                }
+                            </p>
+                        </Tooltip>
                         <div className="flex justify-between items-center mt-1">
-                           <span className="font-bold">{employeeAutoTarget.annual.quantity.toLocaleString('fa-IR')} عدد</span>
-                           <span className="font-bold text-green-600">{employeeAutoTarget.annual.value.toLocaleString('fa-IR')} تومان</span>
+                           <span className="font-bold">{aggregatedAnnualTarget.quantity.toLocaleString('fa-IR')} عدد</span>
+                           <span className="font-bold text-green-600">{aggregatedAnnualTarget.value.toLocaleString('fa-IR')} تومان</span>
                         </div>
                     </div>
                 )}
@@ -123,14 +130,14 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnl
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                         </button>
                     </Tooltip>
-                    <Tooltip text="مشاهده اهداف">
-                         <button onClick={() => setTargetDetailModalOpen(true)} className="p-2 rounded-full hover:bg-green-100 text-gray-500 hover:text-green-600 transition" disabled={!employeeAutoTarget}>
+                    <Tooltip text={!employeeAutoTargetForModal ? "برای مشاهده جزئیات، فقط یک محصول را انتخاب کنید" : "مشاهده اهداف"}>
+                         <button onClick={() => setTargetDetailModalOpen(true)} className="p-2 rounded-full hover:bg-green-100 text-gray-500 hover:text-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled={!employeeAutoTargetForModal}>
                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" /></svg>
                         </button>
                     </Tooltip>
                     <Tooltip text="ویرایش">
                         <button onClick={() => setEditModalOpen(true)} className="p-2 rounded-full hover:bg-purple-100 text-gray-500 hover:text-purple-600 transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002 2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
                     </Tooltip>
                     <Tooltip text="حذف">
@@ -163,7 +170,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnl
                         period={period}
                         provinces={provinces}
                         medicalCenters={medicalCenters}
-                        employeeAutoTarget={employeeAutoTarget}
+                        employeeAutoTarget={employeeAutoTargetForModal}
                         products={products}
                         marketData={marketData}
                         tehranMarketData={tehranMarketData}
@@ -174,7 +181,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnl
 
             {isTrendModalOpen && <TrendModal employee={employee} kpiConfigs={kpiConfigs} closeModal={() => setTrendModalOpen(false)} />}
             {isEditModalOpen && <EditEmployeeModal employee={employee} closeModal={() => setEditModalOpen(false)} />}
-            {isTargetDetailModalOpen && employeeAutoTarget && <EmployeeTargetDetailModal targetData={employeeAutoTarget} closeModal={() => setTargetDetailModalOpen(false)} />}
+            {isTargetDetailModalOpen && employeeAutoTargetForModal && <EmployeeTargetDetailModal targetData={employeeAutoTargetForModal} closeModal={() => setTargetDetailModalOpen(false)} />}
         </div>
     );
 };

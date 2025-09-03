@@ -1,5 +1,5 @@
-
 import React, { ReactNode } from 'react';
+import ReactDOM from 'react-dom';
 
 interface ModalProps {
     isOpen: boolean;
@@ -8,7 +8,14 @@ interface ModalProps {
     size?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
 }
 
+const modalRoot = document.getElementById('modal-portal');
+
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, size = '2xl' }) => {
+    if (!modalRoot) {
+        console.error("Modal portal root element with id 'modal-portal' not found in the DOM.");
+        return null;
+    }
+
     if (!isOpen) return null;
     
     const sizeClasses = {
@@ -20,7 +27,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, size = '2xl' }
         '4xl': 'md:max-w-4xl',
     };
 
-    return (
+    const modalContent = (
         <div 
             className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex justify-center items-start overflow-y-auto z-50 transition-opacity duration-300 pt-16 pb-8"
             onClick={onClose}
@@ -42,6 +49,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, size = '2xl' }
             </div>
         </div>
     );
+    
+    return ReactDOM.createPortal(modalContent, modalRoot);
 };
 
 export default Modal;

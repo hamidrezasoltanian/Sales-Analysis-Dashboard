@@ -6,6 +6,7 @@ import { HIGH_PERFORMANCE_THRESHOLD, LOW_PERFORMANCE_THRESHOLD } from '../consta
 import EmployeeCard from './EmployeeCard.tsx';
 import { useAppContext } from '../contexts/AppContext.tsx';
 import StatCard from './StatCard.tsx';
+import MultiSelectDropdown from './common/MultiSelectDropdown.tsx';
 
 const KpiDashboardView: React.FC = () => {
     const { appData, addYear, setQuickAddModalOpen, setCardSize } = useAppContext();
@@ -16,7 +17,7 @@ const KpiDashboardView: React.FC = () => {
     const [month, setMonth] = useState('فروردین');
     const [searchTerm, setSearchTerm] = useState('');
     const [sort, setSort] = useState('default');
-    const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id.toString() || '');
+    const [selectedProductIds, setSelectedProductIds] = useState<string[]>(products[0] ? [products[0].id.toString()] : []);
     const [department, setDepartment] = useState('all');
 
     const period = `${month} ${year}`;
@@ -31,15 +32,19 @@ const KpiDashboardView: React.FC = () => {
     }, [availableYears, year]);
     
     useEffect(() => {
-        if (!selectedProductId && products.length > 0) {
-            setSelectedProductId(products[0].id.toString());
+        if (selectedProductIds.length === 0 && products.length > 0) {
+            setSelectedProductIds([products[0].id.toString()]);
         }
-    }, [products, selectedProductId]);
+    }, [products, selectedProductIds]);
 
     const handleSeasonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newSeason = e.target.value as 'بهار' | 'تابستان' | 'پاییز' | 'زمستان';
         setSeason(newSeason);
         setMonth(monthsForSeason[newSeason][0]);
+    };
+    
+    const handleProductMultiSelectChange = (selectedIds: string[]) => {
+        setSelectedProductIds(selectedIds);
     };
 
     const handleAddYear = () => {
@@ -52,7 +57,7 @@ const KpiDashboardView: React.FC = () => {
     };
     
 
-    const { filteredAndSortedEmployees, teamStats, trendData, autoTargetsByEmployee, selectedProduct } = useMemo(() => {
+    const { filteredAndSortedEmployees, teamStats, trendData, aggregatedTargetsByEmployee, autoTargetsByEmployeeForModal } = useMemo(() => {
         const departmentFilteredEmployees = department === 'all'
             ? employees
             : employees.filter(e => e.department === department);
@@ -96,15 +101,47 @@ const KpiDashboardView: React.FC = () => {
              return trend;
         };
 
-        const currentSelectedProduct = products.find(p => p.id === parseInt(selectedProductId));
-        const nationalMarketSize = marketData[selectedProductId]?.[year] || 0;
-        const tehranMarketSize = tehranMarketData[selectedProductId]?.[year] || 0;
+        const selectedProducts = products.filter(p => selectedProductIds.includes(p.id.toString()));
 
-        // Auto-targets should be calculated for all employees regardless of department filter,
-        // so the card can show data even if the employee is filtered out by department.
-        const autoTargets = calculateAutoTargets(employees, provinces, medicalCenters, currentSelectedProduct, nationalMarketSize, tehranMarketSize);
-        const autoTargetsMap = new Map(autoTargets.map(t => [t.employeeId, t]));
+        const localAggregatedTargets = new Map<number, {
+            quantity: number; value: number; productCount: number; productNames: string[];
+        }>();
+
+        employees.forEach(emp => {
+            localAggregatedTargets.set(emp.id, {
+                quantity: 0, value: 0,
+                productCount: selectedProducts.length,
+                productNames: selectedProducts.map(p => p.name)
+            });
+        });
+
+        selectedProducts.forEach(product => {
+            const productIdStr = product.id.toString();
+            const nationalMarketSize = marketData[productIdStr]?.[year] || 0;
+            const tehranMarketSize = tehranMarketData[productIdStr]?.[year] || 0;
+            const autoTargetsForProduct = calculateAutoTargets(employees, provinces, medicalCenters, product, nationalMarketSize, tehranMarketSize);
+
+            autoTargetsForProduct.forEach(target => {
+                const empId = target.employeeId;
+                const currentAgg = localAggregatedTargets.get(empId)!;
+                currentAgg.quantity += target.annual.quantity;
+                currentAgg.value += target.annual.value;
+            });
+        });
         
+        const localAutoTargetsForModal: Map<number, EmployeeAutoTarget> | undefined = selectedProductIds.length === 1
+            ? (() => {
+                const singleProductId = selectedProductIds[0];
+                const singleProduct = products.find(p => p.id.toString() === singleProductId);
+                if (!singleProduct) return undefined;
+                
+                const nationalMarketSize = marketData[singleProductId]?.[year] || 0;
+                const tehranMarketSize = tehranMarketData[singleProductId]?.[year] || 0;
+                const autoTargets = calculateAutoTargets(employees, provinces, medicalCenters, singleProduct, nationalMarketSize, tehranMarketSize);
+                return new Map(autoTargets.map(t => [t.employeeId, t]));
+            })()
+            : undefined;
+
         const teamTitle = department === 'all' ? 'کل تیم' : `تیم ${department}`;
 
         return {
@@ -120,10 +157,10 @@ const KpiDashboardView: React.FC = () => {
                 high: getTrend(s => s >= HIGH_PERFORMANCE_THRESHOLD, departmentFilteredEmployees),
                 low: getTrend(s => s < LOW_PERFORMANCE_THRESHOLD, departmentFilteredEmployees),
             },
-            autoTargetsByEmployee: autoTargetsMap,
-            selectedProduct: currentSelectedProduct,
+            aggregatedTargetsByEmployee: localAggregatedTargets,
+            autoTargetsByEmployeeForModal: localAutoTargetsForModal,
         };
-    }, [employees, searchTerm, sort, period, kpiConfigs, selectedProductId, year, products, marketData, tehranMarketData, provinces, medicalCenters, department]);
+    }, [employees, searchTerm, sort, period, kpiConfigs, selectedProductIds, year, products, marketData, tehranMarketData, provinces, medicalCenters, department]);
 
     return (
         <div className="animate-subtle-appear">
@@ -150,9 +187,14 @@ const KpiDashboardView: React.FC = () => {
                     </div>
                      <div className="flex items-center gap-2 flex-wrap xl:justify-center">
                          <label className="text-sm font-medium">تحلیل هدف:</label>
-                          <select value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)} className="p-2 border rounded-lg bg-gray-50 text-gray-700 min-w-[150px]">
-                            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
+                         <div className="w-full sm:w-64">
+                             <MultiSelectDropdown
+                                options={products.map(p => ({ value: p.id.toString(), label: p.name }))}
+                                selectedValues={selectedProductIds}
+                                onChange={handleProductMultiSelectChange}
+                                placeholder="انتخاب محصول(ها)"
+                            />
+                         </div>
                      </div>
                      <div className="flex items-center gap-2 flex-wrap xl:justify-end">
                         <label className="text-sm font-medium">فیلتر:</label>
@@ -185,8 +227,8 @@ const KpiDashboardView: React.FC = () => {
                         employee={emp} 
                         period={period} 
                         isReadOnly={true}
-                        employeeAutoTarget={autoTargetsByEmployee.get(emp.id)}
-                        selectedProductForTarget={selectedProduct}
+                        aggregatedAnnualTarget={aggregatedTargetsByEmployee.get(emp.id)}
+                        employeeAutoTargetForModal={autoTargetsByEmployeeForModal?.get(emp.id)}
                         products={products}
                         marketData={marketData}
                         tehranMarketData={tehranMarketData}

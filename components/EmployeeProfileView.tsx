@@ -5,13 +5,14 @@ import { useAppContext } from '../contexts/AppContext.tsx';
 import EmptyState from './common/EmptyState.tsx';
 import EmployeeCard from './EmployeeCard.tsx';
 import { calculateAutoTargets } from '../utils/calculations.ts';
+import MultiSelectDropdown from './common/MultiSelectDropdown.tsx';
 
 const EmployeeProfileView: React.FC = () => {
     const { appData, setQuickAddModalOpen, addYear } = useAppContext();
     const { employees, availableYears, products, marketData, tehranMarketData, provinces, medicalCenters, cardSize } = appData;
 
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employees[0]?.id.toString() || '');
-    const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id.toString() || '');
+    const [selectedProductIds, setSelectedProductIds] = useState<string[]>(products[0] ? [products[0].id.toString()] : []);
     
     // Period selection logic
     const [year, setYear] = useState(availableYears[0]);
@@ -32,15 +33,19 @@ const EmployeeProfileView: React.FC = () => {
         if (!selectedEmployeeId && employees.length > 0) {
             setSelectedEmployeeId(employees[0].id.toString());
         }
-        if (!selectedProductId && products.length > 0) {
-            setSelectedProductId(products[0].id.toString());
+        if (selectedProductIds.length === 0 && products.length > 0) {
+            setSelectedProductIds([products[0].id.toString()]);
         }
-    }, [employees, selectedEmployeeId, products, selectedProductId]);
+    }, [employees, selectedEmployeeId, products, selectedProductIds]);
 
     const handleSeasonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newSeason = e.target.value as 'بهار' | 'تابستان' | 'پاییز' | 'زمستان';
         setSeason(newSeason);
         setMonth(monthsForSeason[newSeason][0]);
+    };
+
+    const handleProductMultiSelectChange = (selectedIds: string[]) => {
+        setSelectedProductIds(selectedIds);
     };
     
     const handleAddYear = () => {
@@ -52,22 +57,49 @@ const EmployeeProfileView: React.FC = () => {
         }
     };
 
-    const { selectedEmployee, employeeAutoTarget, selectedProduct } = useMemo(() => {
+    const { selectedEmployee, aggregatedAnnualTarget, employeeAutoTargetForModal } = useMemo(() => {
         const employee = employees.find(emp => emp.id.toString() === selectedEmployeeId);
-        if (!employee) return { selectedEmployee: undefined, employeeAutoTarget: undefined, selectedProduct: undefined };
+        if (!employee) return { selectedEmployee: undefined, aggregatedAnnualTarget: undefined, employeeAutoTargetForModal: undefined };
 
-        const currentSelectedProduct = products.find(p => p.id === parseInt(selectedProductId));
-        const nationalMarketSize = marketData[selectedProductId]?.[year] || 0;
-        const tehranMarketSize = tehranMarketData[selectedProductId]?.[year] || 0;
+        const selectedProducts = products.filter(p => selectedProductIds.includes(p.id.toString()));
 
-        const autoTargets = calculateAutoTargets([employee], provinces, medicalCenters, currentSelectedProduct, nationalMarketSize, tehranMarketSize);
+        const localAggregatedTarget = {
+            quantity: 0, value: 0,
+            productCount: selectedProducts.length,
+            productNames: selectedProducts.map(p => p.name)
+        };
+
+        selectedProducts.forEach(product => {
+            const productIdStr = product.id.toString();
+            const nationalMarketSize = marketData[productIdStr]?.[year] || 0;
+            const tehranMarketSize = tehranMarketData[productIdStr]?.[year] || 0;
+            const autoTargetsForProduct = calculateAutoTargets([employee], provinces, medicalCenters, product, nationalMarketSize, tehranMarketSize);
+
+            if (autoTargetsForProduct.length > 0) {
+                localAggregatedTarget.quantity += autoTargetsForProduct[0].annual.quantity;
+                localAggregatedTarget.value += autoTargetsForProduct[0].annual.value;
+            }
+        });
+        
+        const localAutoTargetsForModal: EmployeeAutoTarget | undefined = selectedProductIds.length === 1
+            ? (() => {
+                const singleProductId = selectedProductIds[0];
+                const singleProduct = products.find(p => p.id.toString() === singleProductId);
+                if (!singleProduct) return undefined;
+
+                const nationalMarketSize = marketData[singleProductId]?.[year] || 0;
+                const tehranMarketSize = tehranMarketData[singleProductId]?.[year] || 0;
+                const autoTargets = calculateAutoTargets([employee], provinces, medicalCenters, singleProduct, nationalMarketSize, tehranMarketSize);
+                return autoTargets.length > 0 ? autoTargets[0] : undefined;
+            })()
+            : undefined;
         
         return {
             selectedEmployee: employee,
-            employeeAutoTarget: autoTargets.length > 0 ? autoTargets[0] : undefined,
-            selectedProduct: currentSelectedProduct
+            aggregatedAnnualTarget: localAggregatedTarget,
+            employeeAutoTargetForModal: localAutoTargetsForModal
         };
-    }, [selectedEmployeeId, selectedProductId, year, employees, products, marketData, tehranMarketData, provinces, medicalCenters]);
+    }, [selectedEmployeeId, selectedProductIds, year, employees, products, marketData, tehranMarketData, provinces, medicalCenters]);
     
     return (
         <div className="animate-subtle-appear space-y-6">
@@ -87,14 +119,12 @@ const EmployeeProfileView: React.FC = () => {
                             ))}
                         </select>
                          <label htmlFor="product-selector" className="block text-sm font-medium">انتخاب محصول برای تحلیل هدف:</label>
-                         <select 
-                            id="product-selector" 
-                            value={selectedProductId} 
-                            onChange={e => setSelectedProductId(e.target.value)}
-                            className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700"
-                        >
-                             {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                         </select>
+                         <MultiSelectDropdown
+                            options={products.map(p => ({ value: p.id.toString(), label: p.name }))}
+                            selectedValues={selectedProductIds}
+                            onChange={handleProductMultiSelectChange}
+                            placeholder="انتخاب محصول(ها)"
+                        />
                     </div>
                      <div className="flex flex-col gap-2 justify-end">
                         <label className="text-sm font-medium">دوره:</label>
@@ -119,8 +149,8 @@ const EmployeeProfileView: React.FC = () => {
                      <EmployeeCard 
                         employee={selectedEmployee} 
                         period={period}
-                        employeeAutoTarget={employeeAutoTarget}
-                        selectedProductForTarget={selectedProduct}
+                        aggregatedAnnualTarget={aggregatedAnnualTarget}
+                        employeeAutoTargetForModal={employeeAutoTargetForModal}
                         products={products}
                         marketData={marketData}
                         tehranMarketData={tehranMarketData}
