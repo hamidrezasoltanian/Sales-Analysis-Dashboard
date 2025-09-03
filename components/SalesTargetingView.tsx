@@ -1,18 +1,23 @@
+
 import React, { useState, useMemo } from 'react';
-import { Employee, Product, SalesTargets } from '../types.ts';
-import { getPreviousPeriod } from '../utils/calculations.ts';
+import { Employee, Product, SalesTargets, Province, MedicalCenter, MarketData } from '../types.ts';
+import { calculateAutoTargets } from '../utils/calculations.ts';
 import InlineEdit from './common/InlineEdit.tsx';
 import { PERSIAN_MONTHS } from '../constants.ts';
 
 interface SalesTargetingViewProps {
     employees: Employee[];
     products: Product[];
+    provinces: Province[];
+    medicalCenters: MedicalCenter[];
     salesTargets: SalesTargets;
+    marketData: MarketData;
+    tehranMarketData: MarketData;
     saveSalesTargetData: (employeeId: number, period: string, productId: number, type: 'target' | 'actual', value: number | null) => void;
     availableYears: number[];
 }
 
-const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, products, salesTargets, saveSalesTargetData, availableYears }) => {
+const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, products, provinces, medicalCenters, salesTargets, marketData, tehranMarketData, saveSalesTargetData, availableYears }) => {
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employees[0]?.id.toString() || '');
     const [year, setYear] = useState(availableYears[0] || new Date().getFullYear() + 379);
     const [month, setMonth] = useState('فروردین');
@@ -34,6 +39,34 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
     const formatCurrency = (value: number) => !isFinite(value) ? '۰' : Math.round(value).toLocaleString('fa-IR');
     const numberFormatter = (val: any) => (val === null || val === undefined || val === '') ? '-' : Number(val).toLocaleString('fa-IR');
 
+    const autoTargetsForYear = useMemo(() => {
+        const employeeId = parseInt(selectedEmployeeId);
+        const employee = employees.find(e => e.id === employeeId);
+        if (!employee) return new Map<number, Map<string, number>>();
+
+        const productTargets = new Map<number, Map<string, number>>();
+
+        products.forEach(product => {
+            const nationalMarketSize = marketData[product.id]?.[year] || 0;
+            const tehranMarketSize = tehranMarketData[product.id]?.[year] || 0;
+
+            const autoTargets = calculateAutoTargets([employee], provinces, medicalCenters, product, nationalMarketSize, tehranMarketSize);
+
+            if (autoTargets.length > 0) {
+                const employeeTarget = autoTargets[0];
+                const monthlyTargets = new Map<string, number>();
+                Object.values(employeeTarget.annual.seasons).forEach(season => {
+                    Object.entries(season.months).forEach(([monthName, monthData]) => {
+                        monthlyTargets.set(monthName, monthData.quantity);
+                    });
+                });
+                productTargets.set(product.id, monthlyTargets);
+            }
+        });
+
+        return productTargets;
+    }, [selectedEmployeeId, year, employees, products, provinces, medicalCenters, marketData, tehranMarketData]);
+
     const calculatedData = useMemo(() => {
         const employeeId = parseInt(selectedEmployeeId);
         if (!employeeId) return [];
@@ -42,14 +75,17 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
 
         return products.map(product => {
             let cumulativeCarryOver = 0;
+            const autoTargetsForProduct = autoTargetsForYear.get(product.id);
 
             // Calculate carry-over by iterating from the start of the year up to the previous month
             for (let i = 0; i < currentMonthIndex; i++) {
-                const loopPeriod = `${PERSIAN_MONTHS[i]} ${year}`;
+                const loopMonthName = PERSIAN_MONTHS[i];
+                const loopPeriod = `${loopMonthName} ${year}`;
                 const loopPeriodData = salesTargets[employeeId]?.[loopPeriod]?.[product.id];
                 
-                // If zeroOutPast is true, treat past months' data as 0 for calculation
-                const loopTarget = zeroOutPast ? 0 : (loopPeriodData?.target ?? 0);
+                // Priority for target: Manual > Auto > 0. Then apply zero-out flag.
+                const resolvedLoopTarget = loopPeriodData?.target ?? autoTargetsForProduct?.get(loopMonthName) ?? 0;
+                const loopTarget = zeroOutPast ? 0 : resolvedLoopTarget;
                 const loopActual = zeroOutPast ? 0 : (loopPeriodData?.actual ?? 0);
                 
                 const totalTargetForLoopPeriod = loopTarget + cumulativeCarryOver;
@@ -57,7 +93,8 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
             }
 
             const currentData = salesTargets[employeeId]?.[period]?.[product.id];
-            const target = currentData?.target ?? 0;
+            // For the current month, find the target with priority: Manual > Auto > 0
+            const target = currentData?.target ?? autoTargetsForProduct?.get(month) ?? 0;
             const actual = currentData?.actual; // Can be null
             
             const totalTarget = target + cumulativeCarryOver;
@@ -73,7 +110,7 @@ const SalesTargetingView: React.FC<SalesTargetingViewProps> = ({ employees, prod
                 achievement
             };
         });
-    }, [selectedEmployeeId, period, products, salesTargets, year, month, zeroOutPast]);
+    }, [selectedEmployeeId, period, products, salesTargets, year, month, zeroOutPast, autoTargetsForYear]);
 
 
     return (

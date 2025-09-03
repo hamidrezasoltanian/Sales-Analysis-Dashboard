@@ -37,7 +37,11 @@ const SalesTargetingPage: React.FC = () => {
                     <SalesTargetingView 
                         employees={appData.employees}
                         products={appData.products}
+                        provinces={appData.provinces}
+                        medicalCenters={appData.medicalCenters}
                         salesTargets={appData.salesTargets}
+                        marketData={appData.marketData}
+                        tehranMarketData={appData.tehranMarketData}
                         saveSalesTargetData={saveSalesTargetData}
                         availableYears={appData.availableYears}
                     />
