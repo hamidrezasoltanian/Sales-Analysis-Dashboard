@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Chat } from "@google/genai";
 import { Employee, KpiConfigs } from '../types.ts';
 import { calculateKpiScore } from './calculations.ts';
@@ -6,18 +5,20 @@ import { calculateKpiScore } from './calculations.ts';
 // The API key is sourced from `process.env.API_KEY`, which is a build-time variable.
 const API_KEY = process.env.API_KEY;
 
-let ai: GoogleGenAI;
+// Initialize the AI client. If API_KEY is not set, this will be null.
+// Functions using `ai` will then handle this case gracefully.
+const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
-if (!API_KEY) {
-    console.error("API_KEY environment variable not set.");
-    // Handle the absence of an API key, perhaps by disabling AI features.
-} else {
-    ai = new GoogleGenAI({ apiKey: API_KEY });
+if (!ai) {
+    console.error("API_KEY environment variable not set. AI features will be disabled.");
 }
 
 // Function to generate performance notes
 export const generatePerformanceNote = async (employee: Employee, period: string, kpiConfigs: KpiConfigs, finalScore: number): Promise<string> => {
-    if (!ai) return "سرویس هوش مصنوعی در دسترس نیست.";
+    if (!ai) {
+        // Return a user-friendly error message if AI is not available.
+        return "سرویس هوش مصنوعی به دلیل عدم تنظیم کلید API در دسترس نیست.";
+    }
     try {
         const kpiDetails = employee.kpis.map(kpi => {
             const config = kpiConfigs[kpi.type];
@@ -47,9 +48,10 @@ ${kpiDetails}
 };
 
 // Function to create a new chat instance
-export const createChat = (): Chat => {
+export const createChat = (): Chat | null => {
     if (!ai) {
-        throw new Error("Gemini AI client is not initialized.");
+        // Return null instead of throwing an error, as the UI component handles this.
+        return null;
     }
     return ai.chats.create({
         model: 'gemini-2.5-flash',
