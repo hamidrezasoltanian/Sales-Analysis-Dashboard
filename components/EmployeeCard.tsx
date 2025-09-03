@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, memo } from 'react';
-import { Employee, Province, EmployeeAutoTarget, MedicalCenter } from '../types.ts';
+import { Employee, Province, EmployeeAutoTarget, MedicalCenter, Product, MarketData } from '../types.ts';
 import { calculateFinalScore } from '../utils/calculations.ts';
 import TrendModal from './modals/TrendModal.tsx';
 import { useAppContext } from '../contexts/AppContext.tsx';
@@ -8,12 +8,16 @@ import Modal from './common/Modal.tsx';
 import KpiTabContent from './employeeCard/KpiTabContent.tsx';
 import SalesTargetTabContent from './employeeCard/SalesTargetTabContent.tsx';
 import Tooltip from './common/Tooltip.tsx';
+import EmployeeTargetDetailModal from './modals/EmployeeTargetDetailModal.tsx';
 
 interface EmployeeCardProps {
     employee: Employee;
     period: string;
     employeeAutoTarget?: EmployeeAutoTarget;
     isReadOnly?: boolean;
+    products?: Product[];
+    marketData?: MarketData;
+    tehranMarketData?: MarketData;
 }
 
 const EditEmployeeModal: React.FC<{ employee: Employee; closeModal: () => void; }> = ({ employee, closeModal }) => {
@@ -71,12 +75,13 @@ const EditEmployeeModal: React.FC<{ employee: Employee; closeModal: () => void; 
 };
 
 
-const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnly = false }) => {
+const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnly = false, employeeAutoTarget, products = [], marketData = {}, tehranMarketData = {} }) => {
     const { appData: { kpiConfigs, provinces, medicalCenters }, deleteEmployee } = useAppContext();
     const finalScore = useMemo(() => calculateFinalScore(employee, period, kpiConfigs), [employee, period, kpiConfigs]);
     
     const [isTrendModalOpen, setTrendModalOpen] = useState(false);
     const [isEditModalOpen, setEditModalOpen] = useState(false);
+    const [isTargetDetailModalOpen, setTargetDetailModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'kpi' | 'targets'>('kpi');
 
     return (
@@ -93,6 +98,11 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnl
                     <Tooltip text="نمایش روند">
                         <button onClick={() => setTrendModalOpen(true)} className="p-2 rounded-full hover:bg-blue-100 text-gray-500 hover:text-blue-600 transition">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                        </button>
+                    </Tooltip>
+                    <Tooltip text="مشاهده اهداف">
+                         <button onClick={() => setTargetDetailModalOpen(true)} className="p-2 rounded-full hover:bg-green-100 text-gray-500 hover:text-green-600 transition" disabled={!employeeAutoTarget}>
+                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" /></svg>
                         </button>
                     </Tooltip>
                     <Tooltip text="ویرایش">
@@ -129,12 +139,17 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee, period, isReadOnl
                         period={period}
                         provinces={provinces}
                         medicalCenters={medicalCenters}
+                        employeeAutoTarget={employeeAutoTarget}
+                        products={products}
+                        marketData={marketData}
+                        tehranMarketData={tehranMarketData}
                     />
                 )}
             </div>
 
             {isTrendModalOpen && <TrendModal employee={employee} kpiConfigs={kpiConfigs} closeModal={() => setTrendModalOpen(false)} />}
             {isEditModalOpen && <EditEmployeeModal employee={employee} closeModal={() => setEditModalOpen(false)} />}
+            {isTargetDetailModalOpen && employeeAutoTarget && <EmployeeTargetDetailModal targetData={employeeAutoTarget} closeModal={() => setTargetDetailModalOpen(false)} />}
         </div>
     );
 };

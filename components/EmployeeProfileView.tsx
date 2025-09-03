@@ -1,15 +1,17 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { AppData, Employee } from '../types.ts';
+import { AppData, Employee, EmployeeAutoTarget } from '../types.ts';
 import { useAppContext } from '../contexts/AppContext.tsx';
 import EmptyState from './common/EmptyState.tsx';
 import EmployeeCard from './EmployeeCard.tsx';
+import { calculateAutoTargets } from '../utils/calculations.ts';
 
 const EmployeeProfileView: React.FC = () => {
     const { appData, setQuickAddModalOpen, addYear } = useAppContext();
-    const { employees, availableYears } = appData;
+    const { employees, availableYears, products, marketData, tehranMarketData, provinces, medicalCenters } = appData;
 
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employees[0]?.id.toString() || '');
+    const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id.toString() || '');
     
     // Period selection logic
     const [year, setYear] = useState(availableYears[0]);
@@ -30,7 +32,10 @@ const EmployeeProfileView: React.FC = () => {
         if (!selectedEmployeeId && employees.length > 0) {
             setSelectedEmployeeId(employees[0].id.toString());
         }
-    }, [employees, selectedEmployeeId]);
+        if (!selectedProductId && products.length > 0) {
+            setSelectedProductId(products[0].id.toString());
+        }
+    }, [employees, selectedEmployeeId, products, selectedProductId]);
 
     const handleSeasonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newSeason = e.target.value as 'بهار' | 'تابستان' | 'پاییز' | 'زمستان';
@@ -47,16 +52,28 @@ const EmployeeProfileView: React.FC = () => {
         }
     };
 
-    const selectedEmployee = useMemo(() => {
-        return employees.find(emp => emp.id.toString() === selectedEmployeeId);
-    }, [selectedEmployeeId, employees]);
+    const { selectedEmployee, employeeAutoTarget } = useMemo(() => {
+        const employee = employees.find(emp => emp.id.toString() === selectedEmployeeId);
+        if (!employee) return { selectedEmployee: undefined, employeeAutoTarget: undefined };
+
+        const selectedProduct = products.find(p => p.id === parseInt(selectedProductId));
+        const nationalMarketSize = marketData[selectedProductId]?.[year] || 0;
+        const tehranMarketSize = tehranMarketData[selectedProductId]?.[year] || 0;
+
+        const autoTargets = calculateAutoTargets([employee], provinces, medicalCenters, selectedProduct, nationalMarketSize, tehranMarketSize);
+        
+        return {
+            selectedEmployee: employee,
+            employeeAutoTarget: autoTargets.length > 0 ? autoTargets[0] : undefined
+        };
+    }, [selectedEmployeeId, selectedProductId, year, employees, products, marketData, tehranMarketData, provinces, medicalCenters]);
     
     return (
         <div className="animate-subtle-appear space-y-6">
             <div className="card border rounded-lg p-4">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                         <label htmlFor="employee-selector" className="block text-sm font-medium mb-2">انتخاب کارمند:</label>
+                    <div className="flex flex-col gap-2">
+                         <label htmlFor="employee-selector" className="block text-sm font-medium">انتخاب کارمند:</label>
                         <select 
                             id="employee-selector" 
                             value={selectedEmployeeId} 
@@ -68,26 +85,44 @@ const EmployeeProfileView: React.FC = () => {
                                 <option key={emp.id} value={emp.id}>{emp.name}</option>
                             ))}
                         </select>
+                         <label htmlFor="product-selector" className="block text-sm font-medium">انتخاب محصول برای تحلیل هدف:</label>
+                         <select 
+                            id="product-selector" 
+                            value={selectedProductId} 
+                            onChange={e => setSelectedProductId(e.target.value)}
+                            className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700"
+                        >
+                             {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                         </select>
                     </div>
-                     <div className="flex items-end gap-2 flex-wrap">
-                        <label className="text-sm font-medium self-end mb-2 hidden sm:inline">دوره:</label>
-                        <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="p-2 border rounded-lg bg-gray-50 text-gray-700">
-                             {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-                        </select>
-                         <button onClick={handleAddYear} className="p-2 h-[42px] bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition" title="افزودن سال جدید">+</button>
-                        <select value={season} onChange={handleSeasonChange} className="p-2 border rounded-lg bg-gray-50 text-gray-700">
-                            {Object.keys(monthsForSeason).map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                        <select value={month} onChange={e => setMonth(e.target.value)} className="p-2 border rounded-lg bg-gray-50 text-gray-700">
-                            {monthsForSeason[season].map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
+                     <div className="flex flex-col gap-2 justify-end">
+                        <label className="text-sm font-medium">دوره:</label>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="p-2 border rounded-lg bg-gray-50 text-gray-700 flex-grow">
+                                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                            </select>
+                            <button onClick={handleAddYear} className="p-2 h-[42px] bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition" title="افزودن سال جدید">+</button>
+                            <select value={season} onChange={handleSeasonChange} className="p-2 border rounded-lg bg-gray-50 text-gray-700 flex-grow">
+                                {Object.keys(monthsForSeason).map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                            <select value={month} onChange={e => setMonth(e.target.value)} className="p-2 border rounded-lg bg-gray-50 text-gray-700 flex-grow">
+                                {monthsForSeason[season].map(m => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {selectedEmployee ? (
                  <div className="animate-subtle-appear">
-                     <EmployeeCard employee={selectedEmployee} period={period} />
+                     <EmployeeCard 
+                        employee={selectedEmployee} 
+                        period={period}
+                        employeeAutoTarget={employeeAutoTarget}
+                        products={products}
+                        marketData={marketData}
+                        tehranMarketData={tehranMarketData}
+                     />
                  </div>
             ) : (
                 <EmptyState 

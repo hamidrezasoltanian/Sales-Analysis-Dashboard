@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Employee, KpiConfigs, Product, EmployeeAutoTarget } from '../types.ts';
-import { calculateFinalScore, getPreviousPeriod } from '../utils/calculations.ts';
+import { calculateFinalScore, getPreviousPeriod, calculateAutoTargets } from '../utils/calculations.ts';
 import { HIGH_PERFORMANCE_THRESHOLD, LOW_PERFORMANCE_THRESHOLD } from '../constants.ts';
 import EmployeeCard from './EmployeeCard.tsx';
 import { useAppContext } from '../contexts/AppContext.tsx';
@@ -9,13 +9,15 @@ import StatCard from './StatCard.tsx';
 
 const KpiDashboardView: React.FC = () => {
     const { appData, addYear, setQuickAddModalOpen } = useAppContext();
-    const { employees, kpiConfigs, availableYears, provinces, medicalCenters, products, marketData } = appData;
+    const { employees, kpiConfigs, availableYears, provinces, medicalCenters, products, marketData, tehranMarketData } = appData;
 
     const [year, setYear] = useState(availableYears[0]);
     const [season, setSeason] = useState<'بهار' | 'تابستان' | 'پاییز' | 'زمستان'>('بهار');
     const [month, setMonth] = useState('فروردین');
     const [searchTerm, setSearchTerm] = useState('');
     const [sort, setSort] = useState('default');
+    const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id.toString() || '');
+
 
     const period = `${month} ${year}`;
     const monthsForSeason = {'بهار':['فروردین','اردیبهشت','خرداد'],'تابستان':['تیر','مرداد','شهریور'],'پاییز':['مهر','آبان','آذر'],'زمستان':['دی','بهمن','اسفند']};
@@ -25,6 +27,12 @@ const KpiDashboardView: React.FC = () => {
             setYear(availableYears[0]);
         }
     }, [availableYears, year]);
+    
+    useEffect(() => {
+        if (!selectedProductId && products.length > 0) {
+            setSelectedProductId(products[0].id.toString());
+        }
+    }, [products, selectedProductId]);
 
     const handleSeasonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newSeason = e.target.value as 'بهار' | 'تابستان' | 'پاییز' | 'زمستان';
@@ -42,7 +50,7 @@ const KpiDashboardView: React.FC = () => {
     };
     
 
-    const { filteredAndSortedEmployees, teamStats, trendData } = useMemo(() => {
+    const { filteredAndSortedEmployees, teamStats, trendData, autoTargetsByEmployee } = useMemo(() => {
         const scores = employees.map(emp => ({emp, score: calculateFinalScore(emp, period, kpiConfigs)}));
         const filtered = scores.filter(({emp}) => emp.name.toLowerCase().includes(searchTerm.toLowerCase()));
         
@@ -82,6 +90,13 @@ const KpiDashboardView: React.FC = () => {
              return trend;
         };
 
+        const selectedProduct = products.find(p => p.id === parseInt(selectedProductId));
+        const nationalMarketSize = marketData[selectedProductId]?.[year] || 0;
+        const tehranMarketSize = tehranMarketData[selectedProductId]?.[year] || 0;
+
+        const autoTargets = calculateAutoTargets(employees, provinces, medicalCenters, selectedProduct, nationalMarketSize, tehranMarketSize);
+        const autoTargetsMap = new Map(autoTargets.map(t => [t.employeeId, t]));
+
         return {
             filteredAndSortedEmployees: filtered.map(({emp}) => emp),
             teamStats: {
@@ -93,9 +108,10 @@ const KpiDashboardView: React.FC = () => {
                 average: getAverageTrend(),
                 high: getTrend(s => s >= HIGH_PERFORMANCE_THRESHOLD),
                 low: getTrend(s => s < LOW_PERFORMANCE_THRESHOLD),
-            }
+            },
+            autoTargetsByEmployee: autoTargetsMap,
         };
-    }, [employees, searchTerm, sort, period, kpiConfigs]);
+    }, [employees, searchTerm, sort, period, kpiConfigs, selectedProductId, year, products, marketData, tehranMarketData, provinces, medicalCenters]);
 
     return (
         <div className="animate-subtle-appear">
@@ -108,6 +124,7 @@ const KpiDashboardView: React.FC = () => {
              <div className="card border rounded-lg p-4 mb-6">
                  <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                     <div className="flex items-center gap-2 flex-wrap">
+                        <label className="text-sm font-medium">دوره:</label>
                         <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="p-2 border rounded-lg bg-gray-50 text-gray-700">
                              {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
@@ -119,6 +136,12 @@ const KpiDashboardView: React.FC = () => {
                             {monthsForSeason[season].map(m => <option key={m} value={m}>{m}</option>)}
                         </select>
                     </div>
+                     <div className="flex items-center gap-2 flex-wrap">
+                         <label className="text-sm font-medium">محصول برای تحلیل هدف:</label>
+                          <select value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)} className="p-2 border rounded-lg bg-gray-50 text-gray-700 min-w-[150px]">
+                            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                     </div>
                  </div>
                  <div className="flex flex-col md:flex-row gap-4 mt-4">
                     <input type="text" placeholder="جستجوی کارمند..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full md:w-1/2 p-2 border rounded-lg bg-gray-50 text-gray-700" />
@@ -134,7 +157,15 @@ const KpiDashboardView: React.FC = () => {
 
             <div className="space-y-6">
                 {filteredAndSortedEmployees.map((emp, index) => {
-                    return <div key={emp.id} className="animate-subtle-appear" style={{ animationDelay: `${index * 50}ms`}}><EmployeeCard employee={emp} period={period} isReadOnly={true} /></div>
+                    return <div key={emp.id} className="animate-subtle-appear" style={{ animationDelay: `${index * 50}ms`}}><EmployeeCard 
+                        employee={emp} 
+                        period={period} 
+                        isReadOnly={true}
+                        employeeAutoTarget={autoTargetsByEmployee.get(emp.id)}
+                        products={products}
+                        marketData={marketData}
+                        tehranMarketData={tehranMarketData}
+                         /></div>
                 })}
             </div>
         </div>
