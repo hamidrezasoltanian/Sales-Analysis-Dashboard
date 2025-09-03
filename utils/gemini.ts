@@ -28,8 +28,8 @@ if (!ai) {
 // Function to generate performance notes
 export const generatePerformanceNote = async (employee: Employee, period: string, kpiConfigs: KpiConfigs, finalScore: number): Promise<string> => {
     if (!ai) {
-        // Return a user-friendly error message if AI is not available.
-        return "سرویس هوش مصنوعی به دلیل عدم تنظیم کلید API در دسترس نیست.";
+        // Throw a specific error that the UI can catch and handle appropriately.
+        throw new Error("AI_DISABLED");
     }
     try {
         const kpiDetails = employee.kpis.map(kpi => {
@@ -55,7 +55,7 @@ ${kpiDetails}
         return response.text;
     } catch (error) {
         console.error("Error generating performance note:", error);
-        return "خطا در تولید یادداشت. لطفاً دوباره تلاش کنید.";
+        throw new Error("خطا در تولید یادداشت. لطفاً دوباره تلاش کنید.");
     }
 };
 

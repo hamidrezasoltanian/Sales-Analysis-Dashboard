@@ -65,9 +65,13 @@ const KpiTabContent: React.FC<KpiTabContentProps> = ({ employee, period, finalSc
         try {
             const generatedNote = await generatePerformanceNote(employee, period, kpiConfigs, finalScore);
             setNote(generatedNote);
-        } catch (error) {
-            console.error(error);
-            showNotification('خطا در ارتباط با هوش مصنوعی.', 'error');
+        } catch (error: any) {
+            if (error.message === "AI_DISABLED") {
+                showNotification('سرویس هوش مصنوعی در دسترس نیست (کلید API تنظیم نشده).', 'error');
+            } else {
+                console.error(error);
+                showNotification(error.message || 'خطا در ارتباط با هوش مصنوعی.', 'error');
+            }
         } finally {
             setIsGenerating(false);
         }
