@@ -7,6 +7,7 @@ import Sidebar from './components/Sidebar.tsx';
 import PageLoader from './components/common/PageLoader.tsx';
 import Header from './components/common/Header.tsx';
 import QuickAddModal from './components/modals/QuickAddModal.tsx';
+import AiAssistantModal from './components/modals/AiAssistantModal.tsx';
 
 // Use static imports instead of lazy loading to fix module resolution error
 import KpiDashboardView from './components/KpiDashboardView.tsx';
@@ -17,7 +18,7 @@ import EmployeeProfileView from './components/EmployeeProfileView.tsx';
 import SettingsView from './components/SettingsView.tsx';
 
 const AppContent: React.FC = () => {
-    const { appData, quickAddModalOpen, setQuickAddModalOpen } = useAppContext();
+    const { appData, quickAddModalOpen, setQuickAddModalOpen, aiAssistantModalOpen, setAiAssistantModalOpen } = useAppContext();
     const [activeView, setActiveView] = useState<View>(View.Dashboard);
     const [theme, setTheme] = useState<Theme>(Theme.Default);
 
@@ -62,6 +63,7 @@ const AppContent: React.FC = () => {
                 </main>
             </div>
              {quickAddModalOpen && <QuickAddModal closeModal={() => setQuickAddModalOpen(false)} />}
+             {aiAssistantModalOpen && <AiAssistantModal closeModal={() => setAiAssistantModalOpen(false)} />}
         </div>
     );
 };

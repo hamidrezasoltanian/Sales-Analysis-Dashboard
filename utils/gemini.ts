@@ -1,0 +1,60 @@
+
+import { GoogleGenAI, Chat } from "@google/genai";
+import { Employee, KpiConfigs } from '../types.ts';
+import { calculateKpiScore } from './calculations.ts';
+
+// The API key is sourced from `process.env.API_KEY`, which is a build-time variable.
+const API_KEY = process.env.API_KEY;
+
+let ai: GoogleGenAI;
+
+if (!API_KEY) {
+    console.error("API_KEY environment variable not set.");
+    // Handle the absence of an API key, perhaps by disabling AI features.
+} else {
+    ai = new GoogleGenAI({ apiKey: API_KEY });
+}
+
+// Function to generate performance notes
+export const generatePerformanceNote = async (employee: Employee, period: string, kpiConfigs: KpiConfigs, finalScore: number): Promise<string> => {
+    if (!ai) return "سرویس هوش مصنوعی در دسترس نیست.";
+    try {
+        const kpiDetails = employee.kpis.map(kpi => {
+            const config = kpiConfigs[kpi.type];
+            if (!config) return null;
+            const actual = kpi.scores[period] ?? 'N/A';
+            const score = calculateKpiScore(kpi, period, employee.kpis, kpiConfigs).toFixed(1);
+            return `- KPI: ${config.name}, Target: ${kpi.target ?? 'N/A'}, Actual: ${actual}, Score: ${score}/${config.maxPoints}`;
+        }).filter(Boolean).join('\n');
+
+        const prompt = `شما یک دستیار هوش مصنوعی برای مدیران فروش هستید. یک یادداشت ارزیابی عملکرد حرفه‌ای و سازنده به زبان فارسی برای کارمند به نام "${employee.name}" برای دوره "${period}" بنویسید.
+امتیاز نهایی او ${finalScore.toFixed(1)} از 100 است.
+جزئیات KPI های او به شرح زیر است:
+${kpiDetails}
+
+یادداشت باید مختصر (2-3 جمله) باشد، عملکرد او را بر اساس داده‌ها تایید کند و در صورت لزوم زمینه‌هایی برای بهبود پیشنهاد دهد. لحن باید تشویق‌آمیز اما حرفه‌ای باشد. فقط متن یادداشت را برگردانید.`;
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+
+        return response.text;
+    } catch (error) {
+        console.error("Error generating performance note:", error);
+        return "خطا در تولید یادداشت. لطفاً دوباره تلاش کنید.";
+    }
+};
+
+// Function to create a new chat instance
+export const createChat = (): Chat => {
+    if (!ai) {
+        throw new Error("Gemini AI client is not initialized.");
+    }
+    return ai.chats.create({
+        model: 'gemini-2.5-flash',
+        config: {
+            systemInstruction: 'You are a helpful sales management assistant for a medical device company in Iran. Your name is "هوش‌یار". Respond in professional, clear Persian. You can help with strategies, data analysis, and drafting communications.',
+        },
+    });
+};

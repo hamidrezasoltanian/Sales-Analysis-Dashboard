@@ -14,7 +14,7 @@ const VIEW_TITLES: Record<View, { title: string; description: string }> = {
 };
 
 const Header: React.FC<HeaderProps> = ({ activeView }) => {
-    const { setQuickAddModalOpen } = useAppContext();
+    const { setQuickAddModalOpen, setAiAssistantModalOpen } = useAppContext();
     const { title, description } = VIEW_TITLES[activeView] || { title: '', description: '' };
 
     const handleQuickAddClick = () => {
@@ -33,6 +33,14 @@ const Header: React.FC<HeaderProps> = ({ activeView }) => {
                  <p className="text-sm text-secondary hidden md:block">{description}</p>
             </div>
             <div className="flex items-center gap-4">
+                 <Tooltip text="دستیار هوش مصنوعی">
+                    <button 
+                        onClick={() => setAiAssistantModalOpen(true)}
+                        className="btn-purple flex items-center justify-center w-10 h-10 rounded-full shadow-lg hover:shadow-xl transition-shadow"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M11.983 1.903a.75.75 0 00-1.292-.784l-1.25 2.165a.75.75 0 00.22 1.045l2.165 1.25a.75.75 0 001.045-.22l2.165-3.75a.75.75 0 00-.784-1.292L11.983 1.903zM8.017 18.097a.75.75 0 001.292.784l1.25-2.165a.75.75 0 00-.22-1.045l-2.165-1.25a.75.75 0 00-1.045.22l-2.165 3.75a.75.75 0 00.784 1.292l3.269-1.897z" /><path fillRule="evenodd" d="M12.243 9.243a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L15.939 14H8.75a.75.75 0 010-1.5h7.19l-3.7-3.7a.75.75 0 010-1.061zM4.06 4.06a.75.75 0 011.06 0l3.7 3.7H1.75a.75.75 0 110-1.5h7.06L5.12 2.56a.75.75 0 010-1.06l-.53-.53a.75.75 0 010-1.06z" clipRule="evenodd" /></svg>
+                    </button>
+                 </Tooltip>
                  <Tooltip text="افزودن سریع">
                     <button 
                         onClick={handleQuickAddClick}

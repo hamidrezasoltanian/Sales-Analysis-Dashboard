@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { produce } from 'immer';
 import { MedicalCenter, Employee, Product } from '../types.ts';
 import TehranMonitorModal from './modals/TehranMonitorModal.tsx';
 import { useAppContext } from '../contexts/AppContext.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
+import { parseMedicalCentersCsv } from '../../utils/csvParser.ts';
 
 // New local type to handle string inputs for market share, improving decimal input UX
 interface MedicalCenterForUI extends Omit<MedicalCenter, 'marketShare'> {
@@ -13,9 +14,10 @@ interface MedicalCenterForUI extends Omit<MedicalCenter, 'marketShare'> {
 
 // --- Sub-components for TehranManagementView ---
 
-const MedicalCenterManager: React.FC = () => {
-    const { appData: { medicalCenters, products, employees }, deleteMedicalCenter, saveMedicalCenters, updateMedicalCenterAssignment, setQuickAddModalOpen } = useAppContext();
+const MedicalCenterManager: React.FC<{ onOpenMonitor: () => void }> = ({ onOpenMonitor }) => {
+    const { appData: { medicalCenters, products, employees }, deleteMedicalCenter, saveMedicalCenters, updateMedicalCenterAssignment, setQuickAddModalOpen, addMedicalCentersBatch } = useAppContext();
     const { showNotification } = useNotification();
+    const fileInputRef = useRef<HTMLInputElement>(null);
     
     // State to manage UI-specific data, including string inputs for market share
     const [localCenters, setLocalCenters] = useState<MedicalCenterForUI[]>([]);
@@ -75,6 +77,51 @@ const MedicalCenterManager: React.FC = () => {
         });
     }, [localCenters, searchTerm, filterEmployeeId]);
     
+    const handleTriggerImport = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result as string;
+                if (!text) {
+                    showNotification('فایل خالی یا غیرقابل خواندن است.', 'error');
+                    return;
+                }
+                const { data: names, error } = parseMedicalCentersCsv(text);
+                if (error) {
+                    showNotification(error, 'error');
+                    return;
+                }
+                if (names.length > 0) {
+                    const { added, skipped } = addMedicalCentersBatch(names);
+                    let message = `${added} مرکز جدید با موفقیت اضافه شد.`;
+                    if (skipped > 0) {
+                        message += ` ${skipped} مورد تکراری نادیده گرفته شد.`;
+                    }
+                    showNotification(message, 'success');
+                } else {
+                    showNotification('هیچ مرکز جدیدی برای افزودن یافت نشد.', 'info');
+                }
+            } catch (err) {
+                showNotification('خطا در پردازش فایل.', 'error');
+                console.error(err);
+            } finally {
+                // Reset file input to allow re-uploading the same file
+                if (event.target) event.target.value = '';
+            }
+        };
+        reader.onerror = () => {
+             showNotification('خطا در خواندن فایل.', 'error');
+        };
+        reader.readAsText(file);
+    };
+
     return (
         <div className="mt-4">
              <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
@@ -95,7 +142,24 @@ const MedicalCenterManager: React.FC = () => {
                         {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
                     </select>
                 </div>
-                <div className="flex-shrink-0 w-full md:w-auto">
+                <div className="flex-shrink-0 w-full md:w-auto flex flex-col sm:flex-row gap-2">
+                    <button
+                        onClick={onOpenMonitor}
+                        className="btn-purple text-white px-4 py-2 rounded-lg shadow hover:shadow-lg transition flex items-center justify-center gap-2 w-full"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
+                            <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
+                        </svg>
+                        پایش لحظه‌ای
+                    </button>
+                    <button
+                        onClick={handleTriggerImport}
+                        className="bg-teal-600 text-white px-4 py-2 rounded-lg shadow hover:bg-teal-700 transition flex items-center justify-center gap-2 w-full"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                        ورود از CSV
+                    </button>
                      <button 
                         onClick={() => setQuickAddModalOpen('medicalCenter')}
                         className="btn-primary text-white px-4 py-2 rounded-lg shadow hover:shadow-lg transition flex items-center justify-center gap-2 w-full"
@@ -104,6 +168,13 @@ const MedicalCenterManager: React.FC = () => {
                         افزودن مرکز جدید
                     </button>
                 </div>
+                 <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileImport}
+                    className="hidden"
+                    accept=".csv, text/csv"
+                />
             </div>
             <div className="max-h-[70vh] overflow-y-auto border rounded-lg">
                 <table className="w-full text-sm text-right">
@@ -164,18 +235,8 @@ const TehranManagementView: React.FC = () => {
     
     return (
         <div className="animate-subtle-appear">
-             <button 
-                onClick={() => setMonitorModalOpen(true)}
-                className="btn-purple text-white px-4 py-2 rounded-lg shadow hover:shadow-lg transition flex items-center gap-2 absolute top-8 left-8"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
-                    <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
-                </svg>
-                <span>پایش لحظه‌ای مراکز</span>
-            </button>
             <div className="card border rounded-lg p-6">
-                <MedicalCenterManager />
+                <MedicalCenterManager onOpenMonitor={() => setMonitorModalOpen(true)} />
             </div>
 
             {isMonitorModalOpen && (

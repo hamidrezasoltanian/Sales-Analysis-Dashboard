@@ -40,6 +40,8 @@ interface AppContextType {
     appData: AppData;
     quickAddModalOpen: boolean | 'employee' | 'product' | 'medicalCenter';
     setQuickAddModalOpen: (isOpen: boolean | 'employee' | 'product' | 'medicalCenter') => void;
+    aiAssistantModalOpen: boolean;
+    setAiAssistantModalOpen: (isOpen: boolean) => void;
     // Add specific handlers to avoid passing updateAppData everywhere, promoting better encapsulation
     addEmployee: (name: string, title: string, department: string) => void;
     updateEmployee: (id: number, name: string, title: string, department: string, targetAcquisitionRate: number) => void;
@@ -55,6 +57,7 @@ interface AppContextType {
     deleteMedicalCenter: (centerId: string) => void;
     saveMedicalCenters: (centers: MedicalCenter[]) => void;
     updateMedicalCenterAssignment: (centerId: string, employeeId: number | null) => void;
+    addMedicalCentersBatch: (names: string[]) => { added: number, skipped: number };
     updateMarketData: (productId: string, year: number, size: number) => void;
     updateTehranMarketData: (productId: string, year: number, size: number) => void;
     saveSalesTargetData: (employeeId: number, period: string, productId: number, type: 'target' | 'actual', value: number | null) => void;
@@ -72,6 +75,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [appData, setAppData] = useState<AppData>(loadDataFromLocalStorage);
     const [quickAddModalOpen, setQuickAddModalOpen] = useState<AppContextType['quickAddModalOpen']>(false);
+    const [aiAssistantModalOpen, setAiAssistantModalOpen] = useState(false);
     const { showNotification } = useNotification();
 
     // Effect to load background image from IndexedDB on initial app load
@@ -118,6 +122,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const deleteMedicalCenter = useCallback((centerId: string) => updateAppData(d => { d.medicalCenters = d.medicalCenters.filter(c => c.id !== centerId); }), [updateAppData]);
     const saveMedicalCenters = useCallback((centers: MedicalCenter[]) => updateAppData(d => { d.medicalCenters = centers; }), [updateAppData]);
     const updateMedicalCenterAssignment = useCallback((centerId: string, employeeId: number | null) => updateAppData(d => { const c = d.medicalCenters.find(cen => cen.id === centerId); if (c) c.assignedTo = employeeId; }), [updateAppData]);
+    const addMedicalCentersBatch = useCallback((names: string[]): { added: number, skipped: number } => {
+        let added = 0;
+        let skipped = 0;
+        updateAppData(d => {
+            const existingNames = new Set(d.medicalCenters.map(c => c.name.toLowerCase().trim()));
+            names.forEach(name => {
+                const trimmedName = name.trim();
+                // Ensure name is not empty and not a duplicate
+                if (trimmedName && !existingNames.has(trimmedName.toLowerCase())) {
+                    d.medicalCenters.push({
+                        id: `mc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, // More robust unique ID
+                        name: trimmedName,
+                        marketShare: {},
+                        assignedTo: null,
+                    });
+                    existingNames.add(trimmedName.toLowerCase()); // Add to set to prevent duplicates within the same batch
+                    added++;
+                } else {
+                    skipped++;
+                }
+            });
+        });
+        return { added, skipped };
+    }, [updateAppData]);
     const updateMarketData = useCallback((productId: string, year: number, size: number) => updateAppData(d => { if (!d.marketData[productId]) d.marketData[productId] = {}; d.marketData[productId][year] = size; }), [updateAppData]);
     const updateTehranMarketData = useCallback((productId: string, year: number, size: number) => updateAppData(d => { if (!d.tehranMarketData[productId]) d.tehranMarketData[productId] = {}; d.tehranMarketData[productId][year] = size; }), [updateAppData]);
     const saveSalesTargetData = useCallback((employeeId: number, period: string, productId: number, type: 'target' | 'actual', value: number | null) => updateAppData(d => { const et = d.salesTargets[employeeId] ??= {}; const pt = et[period] ??= {}; const pdt = pt[productId] ??= { target: 0, actual: null }; pdt[type] = value; }), [updateAppData]);
@@ -175,9 +203,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const value = {
         appData,
         quickAddModalOpen, setQuickAddModalOpen,
+        aiAssistantModalOpen, setAiAssistantModalOpen,
         addEmployee, updateEmployee, deleteEmployee, addKpiToEmployee, recordScore, saveNote,
         saveProduct, deleteProduct, saveProvinces, updateProvinceAssignment, saveMedicalCenter,
-        deleteMedicalCenter, saveMedicalCenters, updateMedicalCenterAssignment, updateMarketData,
+        deleteMedicalCenter, saveMedicalCenters, updateMedicalCenterAssignment, addMedicalCentersBatch, updateMarketData,
         updateTehranMarketData,
         saveSalesTargetData, updateSalesPlannerState, updateSalesConfig, setBackgroundImage,
         saveKpiConfig, deleteKpiConfig, restoreData, addYear,

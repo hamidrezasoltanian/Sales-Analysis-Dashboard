@@ -1,11 +1,14 @@
 
-import React, { memo } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { Employee, KpiConfigs } from '../../types.ts';
 import { calculateKpiScore } from '../../utils/calculations.ts';
 import { printEmployeeReport } from '../../utils/dataHandlers.ts';
 import { useAppContext } from '../../contexts/AppContext.tsx';
 import RadialProgress from '../common/RadialProgress.tsx';
 import Tooltip from '../common/Tooltip.tsx';
+import { generatePerformanceNote } from '../../utils/gemini.ts';
+import { useNotification } from '../../contexts/NotificationContext.tsx';
+
 
 interface KpiItemProps {
     kpi: Employee['kpis'][0];
@@ -48,6 +51,31 @@ interface KpiTabContentProps {
 
 const KpiTabContent: React.FC<KpiTabContentProps> = ({ employee, period, finalScore, kpiConfigs }) => {
     const { saveNote } = useAppContext();
+    const { showNotification } = useNotification();
+    const [note, setNote] = useState(employee.notes?.[period] || '');
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    useEffect(() => {
+        // Update local note state when props change
+        setNote(employee.notes?.[period] || '');
+    }, [employee, period]);
+
+    const handleGenerateNote = async () => {
+        setIsGenerating(true);
+        try {
+            const generatedNote = await generatePerformanceNote(employee, period, kpiConfigs, finalScore);
+            setNote(generatedNote);
+        } catch (error) {
+            console.error(error);
+            showNotification('خطا در ارتباط با هوش مصنوعی.', 'error');
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleSaveNote = () => {
+        saveNote(employee.id, period, note);
+    };
     
     return (
         <div className="flex flex-col md:flex-row gap-6">
@@ -71,10 +99,20 @@ const KpiTabContent: React.FC<KpiTabContentProps> = ({ employee, period, finalSc
                     }) : <p className="text-xs text-center py-2 text-secondary">هیچ KPI تعریف نشده است.</p>}
                 </div>
                  <div className="border-t mt-3 pt-3" style={{borderColor: 'var(--border-color)'}}>
+                    <div className="flex justify-between items-center mb-2">
+                         <label className="text-sm font-semibold">یادداشت برای دوره {period}</label>
+                        <Tooltip text="ایجاد یادداشت با هوش مصنوعی">
+                            <button onClick={handleGenerateNote} disabled={isGenerating} className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 disabled:cursor-wait">
+                                {isGenerating ? 'در حال ایجاد...' : 'ایجاد با AI'}
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M11.983 1.903a.75.75 0 00-1.292-.784l-1.25 2.165a.75.75 0 00.22 1.045l2.165 1.25a.75.75 0 001.045-.22l2.165-3.75a.75.75 0 00-.784-1.292L11.983 1.903zM8.017 18.097a.75.75 0 001.292.784l1.25-2.165a.75.75 0 00-.22-1.045l-2.165-1.25a.75.75 0 00-1.045.22l-2.165 3.75a.75.75 0 00.784 1.292l3.269-1.897z" /><path fillRule="evenodd" d="M12.243 9.243a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L15.939 14H8.75a.75.75 0 010-1.5h7.19l-3.7-3.7a.75.75 0 010-1.061zM4.06 4.06a.75.75 0 011.06 0l3.7 3.7H1.75a.75.75 0 110-1.5h7.06L5.12 2.56a.75.75 0 010-1.06l-.53-.53a.75.75 0 010-1.06z" clipRule="evenodd" /></svg>
+                            </button>
+                        </Tooltip>
+                    </div>
                     <textarea
                         className="w-full p-2 border rounded-lg bg-gray-100 text-gray-800 text-sm min-h-[60px] transition focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                        defaultValue={employee.notes?.[period] || ''}
-                        onBlur={(e) => saveNote(employee.id, period, e.target.value)}
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        onBlur={handleSaveNote}
                         placeholder={`یادداشت برای دوره ${period}...`}
                     ></textarea>
                 </div>
