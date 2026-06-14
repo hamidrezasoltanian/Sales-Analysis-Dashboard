@@ -1,0 +1,34 @@
+[Unit]
+Description=Sales Dashboard Application
+Documentation=https://github.com/sales-dashboard
+After=network.target
+
+[Service]
+Type=forking
+User=hamidreza
+Group=hamidreza
+WorkingDirectory=/home/hamidreza/Downloads/Sales-Analysis-Dashboard-main
+
+# Environment
+Environment="NODE_ENV=production"
+Environment="PATH=/usr/bin:/usr/local/bin"
+
+# Start script
+ExecStart=/home/hamidreza/Downloads/Sales-Analysis-Dashboard-main/start-production.sh start
+ExecStop=/home/hamidreza/Downloads/Sales-Analysis-Dashboard-main/start-production.sh stop
+ExecReload=/home/hamidreza/Downloads/Sales-Analysis-Dashboard-main/start-production.sh restart
+
+# Auto restart
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=append:/home/hamidreza/Downloads/Sales-Analysis-Dashboard-main/logs/service.log
+StandardError=append:/home/hamidreza/Downloads/Sales-Analysis-Dashboard-main/logs/service-error.log
+
+# Security
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
